@@ -8,8 +8,7 @@
 
 #pragma once 
 
-
-class Case; 
+class Case;
 
 const int WINDOW_SIZE = 10;
 const int NUM_OF_F = 1000;
@@ -27,10 +26,12 @@ public:
 	Estimator(); 
 	~Estimator(); 
 
+    void before_optimize(Case& ca);
+
+    void optimize(Case* ); 
+
 	int m_cnt_pose; 
 	int m_cnt_feat;
-
-	void optimize(Case* case); 
 
 	double para_Pose[WINDOW_SIZE + 1][SIZE_POSE];
     double para_SpeedBias[WINDOW_SIZE + 1][SIZE_SPEEDBIAS];

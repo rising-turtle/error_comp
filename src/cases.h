@@ -20,8 +20,8 @@ public:
 	int m_id; // feature id 
 	double m_loc[3];  // localation in world coordinate 
 
-	vector<int> m_pose_id; // has been seen in different frames 
-	vector<int> m_feat_idx; // feature index in the frame at different pose 
+	vector<int> mv_pose_id; // has been seen in different frames 
+	vector<int> mv_feat_idx; // feature index in the frame at different pose 
 	int m_ref_id; // where depth is referenced 
 };
 
@@ -47,6 +47,7 @@ public:
 
 	virtual void init_pose_features(); // init features and poses 
 	virtual void gen_observations();   // generate observations 
+	virtual void add_noise(double pix_std); // pixel std 
 	vector<Feature> mv_feats; 			// ground truth features 
 	vector<vector<double>> mv_gt_poses; // ground truth poses
 };
