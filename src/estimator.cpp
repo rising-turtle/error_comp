@@ -10,6 +10,7 @@
 #include "estimator.h"
 #include "cases.h"
 #include "projection_factor.h"
+#include "sampson_factor.h"
 #include "pose_local_parameterization.h"
 #include <iostream>
 
@@ -113,6 +114,11 @@ void Estimator::optimize(Case* ca)
     		
     		ProjectionFactor *f = new ProjectionFactor(pi, pj); 
     		f->sqrt_info = 24 * Eigen::Matrix2d::Identity(); 
+
+    		// Eigen::Matrix<double, 4, 4> sqrt_info = 24 * Eigen::Matrix<double, 4, 4>::Identity();
+    		// ceres::CostFunction* f =
+      			// new ceres::AutoDiffCostFunction<SampsonCostFunctor, 4, 7, 7, 7, 1>(
+        			// new SampsonCostFunctor(pi, pj, sqrt_info));
 
     		problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
     			para_Ex_Pose[0], para_Feature[i]);

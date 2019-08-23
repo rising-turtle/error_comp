@@ -14,6 +14,7 @@
 #include "utility.h"
 #include "tic_toc.h"
 
+
 class ProjectionFactor : public ceres::SizedCostFunction<2, 7, 7, 7, 1>
 {
   public:
