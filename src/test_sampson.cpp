@@ -17,15 +17,169 @@ void test_J1();
 
 void test_d_res_d_pose(); 
 
+void test_J1_lambda();
+
+void test_d_res_d_pose_lambda();
 
 int main(int argc, char* argv[])
 {
 
+    cout.precision(8);
+
 	// test_J1(); //
 
-	test_d_res_d_pose(); 
+	// test_d_res_d_pose(); 
+
+    // test_J1_lambda(); 
+
+    test_d_res_d_pose_lambda();
 
 	return 0; 
+}
+
+void test_d_res_d_pose_lambda()
+{
+    Eigen::Vector3d Pi(0, 0, 0);
+    Eigen::Quaterniond Qi(1, 0, 0, 0);
+
+    Eigen::Vector3d Pj(0, 0, 0.2);
+    Eigen::Quaterniond Qj(0.98, 0, 0, 0.199);
+
+    Eigen::Vector3d tic(0, 0, 0);
+    Eigen::Quaterniond qic(1, 0, 0, 0);
+
+    double inv_dep_i = 0.5;
+
+    double ** para = new double *[4];//*[4]; 
+
+    para[0] = new double[7]; // pose_i 
+    para[0][0] = 0; para[0][1] = 0; para[0][2] = 0; 
+    para[0][3] = 0; para[0][4] = 0; para[0][5] = 0; para[0][6] = 1; 
+    
+    para[1] = new double[7]; // pose_j
+    para[1][0] = 0; para[1][1] = 0; para[1][2] = 0.2; 
+    para[1][3] = 0; para[1][4] = 0; para[1][5] = 0.199; para[1][6] = 0.98; 
+    
+    para[2] = new double[7]; // T_I2C
+    para[2][0] = tic(0); para[2][1] = tic(1); para[2][2] = tic(2); 
+    para[2][3] = qic.x(); para[2][4] = qic.y(); para[2][5] = qic.z(); para[2][6] = qic.w(); 
+    
+    para[3] = new double[1]; 
+    para[3][0] = 1;
+
+    Eigen::Vector3d pts_i(0.5, 0.5, 1.); 
+    Eigen::Vector3d pts_camera_i = pts_i / inv_dep_i;
+    Eigen::Vector3d pts_imu_i = qic * pts_camera_i + tic;
+    Eigen::Vector3d pts_w = Qi * pts_imu_i + Pi;
+    Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - Pj);
+    Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
+    
+    double dep_j = pts_camera_j.z();
+    Eigen::Vector3d pts_j(pts_camera_j.x()/dep_j - 0.1, pts_camera_j.y()/dep_j -0.3, 1.);
+ 
+    SampsonFactorWithLambda * f = new SampsonFactorWithLambda(pts_i, pts_j);
+    f->check(para);
+    return ; 
+}
+
+
+void test_J1_lambda()
+{
+    Eigen::Vector3d Pi(0, 0, 0);
+    Eigen::Quaterniond Qi(1, 0, 0, 0);
+
+    Eigen::Vector3d Pj(0, 0, 0.2);
+    Eigen::Quaterniond Qj(0.98, 0, 0, 0.199);
+
+    Eigen::Vector3d tic(0, 0, 0);
+    Eigen::Quaterniond qic(1, 0, 0, 0);
+
+    double inv_dep_i = 0.5;
+
+    Eigen::Vector3d pts_i(0.5, 0.5, 1.); 
+    Eigen::Vector3d pts_i_gt(0.5, 0.5, 1.); 
+
+    Eigen::Vector3d pts_camera_i = pts_i / inv_dep_i;
+    Eigen::Vector3d pts_imu_i = qic * pts_camera_i + tic;
+    Eigen::Vector3d pts_w = Qi * pts_imu_i + Pi;
+    Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - Pj);
+    Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
+    
+    double dep_j = pts_camera_j.z();
+    Eigen::Vector3d pts_j(pts_camera_j.x()/dep_j - 0.1, pts_camera_j.y()/dep_j -0.3, 1.);
+    Eigen::Vector2d epsilon = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
+
+    // compute J = d_epsilon_d_X, [2x4], where X = (pi_x, pi_y, pj_x, pj_y) 
+    Eigen::Matrix<double, 2, 3> d_epsilon_d_pts_cam_j;
+    d_epsilon_d_pts_cam_j << 1./dep_j, 0, -pts_camera_j.x()/(dep_j*dep_j), 
+                            0, 1./dep_j, -pts_camera_j.y()/(dep_j*dep_j); 
+    Eigen::Matrix<double, 3, 3> d_pts_cam_j_d_pts_cam_i; 
+    d_pts_cam_j_d_pts_cam_i = qic.inverse()*Qj.inverse()*Qi*qic; 
+    
+    Eigen::Matrix<double, 3, 2> d_pts_cam_i_d_pts_i; 
+    d_pts_cam_i_d_pts_i << 1./inv_dep_i, 0, 
+                           0, 1./inv_dep_i,
+                           0, 0;
+
+    Eigen::Matrix<double, 3, 1> d_pts_cam_i_d_lambda; 
+    double lambda_isq = 1./(inv_dep_i*inv_dep_i); 
+    d_pts_cam_i_d_lambda = pts_i *(-lambda_isq); 
+
+
+    Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_i = d_epsilon_d_pts_cam_j * d_pts_cam_j_d_pts_cam_i * d_pts_cam_i_d_pts_i; 
+    Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_j = Eigen::Matrix<double,2,2>::Identity()*-1; 
+    Eigen::Matrix<double, 2, 1> d_epsilon_d_lambda = d_epsilon_d_pts_cam_j * d_pts_cam_j_d_pts_cam_i * d_pts_cam_i_d_lambda;
+    Eigen::Matrix<double, 2, 5> d_epsilon_d_X; 
+    d_epsilon_d_X.block<2,2>(0, 0) = d_epsilon_d_pts_i; 
+    d_epsilon_d_X.block<2,2>(0, 2) = d_epsilon_d_pts_j;
+    d_epsilon_d_X.block<2,1>(0, 4) = d_epsilon_d_lambda;
+
+    const double eps = 1e-7; 
+
+    {
+        Eigen::Vector3d delta_pts_i = d_pts_cam_i_d_lambda * eps; 
+        Eigen::Vector3d new_pi = pts_camera_i + delta_pts_i; 
+        cout <<" new pts_camera_i: "<<pts_camera_i<<endl; 
+
+        double new_ind = inv_dep_i + eps; 
+        Eigen::Vector3d new_nu_pi = pts_i / new_ind; 
+        cout <<" new numeric pts_camera_i "<<new_nu_pi<<endl;
+    }
+
+    Eigen::Matrix<double, 2, 5> num_jacobians; 
+
+    Eigen::Matrix<double, 5, 1> X; X << pts_i(0), pts_i(1), pts_j(0), pts_j(1), inv_dep_i; 
+
+    for(int k=0; k<5; k++){
+
+        Eigen::Matrix<double, 5, 1> delta = Eigen::Matrix<double, 5, 1>::Zero(); 
+        delta(k) = eps; // = Eigen::Vector4d(k==0, k==1, k==2, k==3, k==4)*eps; 
+        Eigen::Matrix<double, 5, 1> tmpX = X+delta; 
+        pts_i << tmpX(0), tmpX(1), 1.; 
+        pts_j << tmpX(2), tmpX(3), 1.;
+        inv_dep_i = tmpX(4); 
+
+        pts_camera_i = pts_i / inv_dep_i;
+        pts_imu_i = qic * pts_camera_i + tic;
+        pts_w = Qi * pts_imu_i + Pi;
+        pts_imu_j = Qj.inverse() * (pts_w - Pj);
+        pts_camera_j = qic.inverse() * (pts_imu_j - tic);
+        dep_j = pts_camera_j.z();
+
+        Eigen::Vector2d tmp_epsilon = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
+
+        num_jacobians.col(k) = (tmp_epsilon - epsilon)/eps; 
+
+    }
+
+    cout <<"analytal jacobians: "<<endl; 
+
+    cout <<d_epsilon_d_X<<endl;
+
+    cout <<"numeric jacobians: "<<endl; 
+
+    cout <<num_jacobians<<endl; 
+
 }
 
 void test_d_res_d_pose()
@@ -39,7 +193,7 @@ void test_d_res_d_pose()
     Eigen::Vector3d tic(0, 0, 0);
     Eigen::Quaterniond qic(1, 0, 0, 0);
 
-    double inv_dep_i = 1;
+    double inv_dep_i = 0.5;
 
     double ** para = new double *[4];//*[4]; 
 
