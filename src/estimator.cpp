@@ -11,6 +11,7 @@
 #include "cases.h"
 #include "projection_factor.h"
 #include "sampson_factor.h"
+#include "sampson_factor.h"
 #include "pose_local_parameterization.h"
 #include <iostream>
 
@@ -95,7 +96,6 @@ void Estimator::optimize(Case* ca)
     problem.AddParameterBlock(para_Ex_Pose[0], 7, local_param); 
     problem.SetParameterBlockConstant(para_Ex_Pose[0]);
 
-
     int feat_fac_cnt = 0; 
     // add features 
     for (int i=0; i<m_cnt_feat; i++){
@@ -112,8 +112,9 @@ void Estimator::optimize(Case* ca)
     		int feat_id = ca->mv_feats[i].mv_feat_idx[j]; 
     		Eigen::Vector3d pj(ca->mv_obs[node_id][feat_id].xy[0], ca->mv_obs[node_id][feat_id].xy[1], 1.); 
     		
-    		ProjectionFactor *f = new ProjectionFactor(pi, pj); 
-    		f->sqrt_info = 24 * Eigen::Matrix2d::Identity(); 
+    		// ProjectionFactor *f = new ProjectionFactor(pi, pj); 
+            SampsonFactor *f = new SampsonFactor(pi, pj); 
+    		// f->sqrt_info = 1 * Eigen::Matrix2d::Identity(); 
 
     		// Eigen::Matrix<double, 4, 4> sqrt_info = 24 * Eigen::Matrix<double, 4, 4>::Identity();
     		// ceres::CostFunction* f =
