@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 
 	// test_J1(); //
 
-	// test_d_res_d_pose(); 
+	test_d_res_d_pose(); 
 
     // test_J1_lambda(); 
 
@@ -307,7 +307,7 @@ void test_J1()
 
     cout <<num_jacobians<<endl; 
 
-
+/*
     // test d_J_d_qi 
     Eigen::Matrix<double, 2, 2> J = d_epsilon_d_X.block<2,2>(0,0); 
 
@@ -377,7 +377,7 @@ void test_J1()
     Eigen::Vector4d res = -d_epsilon_d_X.transpose()*JtJ.inverse()*epsilon;
 
     cout <<"res = "<<res.transpose()<<endl;
-    cout <<"J.inverse() = "<< d_epsilon_d_X.inverse()<<endl;
+    cout <<"J.inverse() = "<< d_epsilon_d_X.inverse()<<endl;*/
     // Eigen::Vector4d simple_res = -d_epsilon_d_X.inverse()*epsilon; 
 
     // cout <<"simple_res = "<<simple_res.transpose()<<endl;

@@ -17,7 +17,7 @@ Case::Case(){}
 
 Case::~Case(){}
 
-void Case::init_pose_features()
+void Case::init_pose_features(int N_feats)
 {
 	cout<<"cases.cpp: in Case init_pose_features(), should be implemented in sub classes"<<endl; 
 }
@@ -54,14 +54,49 @@ void Case::add_noise(double pix_std)
 	}
 }
 
+double Case::rmse(double p[][7], double* perr){
+	
+	double sum_err_pos = 0; 
+	double sum_err_ori = 0; 
+
+	for(int i=1; i<mv_gt_poses.size(); i++){
+		Eigen::Vector3d gt_x(mv_gt_poses[i][0], mv_gt_poses[i][1], mv_gt_poses[i][2]); 
+		Eigen::Quaterniond gt_q(mv_gt_poses[i][6], mv_gt_poses[i][3], mv_gt_poses[i][4], mv_gt_poses[i][5]);
+	
+		Eigen::Vector3d x(p[i][0], p[i][1], p[i][2]); 
+		Eigen::Quaterniond q(p[i][6], p[i][3], p[i][4], p[i][5]); 
+
+		Eigen::Vector3d dx = gt_x - x; 
+		sum_err_pos += dx.dot(dx); 
+
+		Eigen::Quaterniond dq = gt_q.inverse()*q; 
+		Eigen::Matrix<double, 3, 3> R = dq.toRotationMatrix(); 
+		double theta = acos(((R(0,0)+R(1,1) + R(2,2))-1)/2);
+		sum_err_ori += theta*theta;
+	}
+
+	if(mv_gt_poses.size() > 1){
+		sum_err_pos /= (mv_gt_poses.size()-1);
+		sum_err_ori /= (mv_gt_poses.size()-1);
+		sum_err_pos = sqrt(sum_err_pos);
+		sum_err_ori = sqrt(sum_err_ori); 
+	}
+
+	perr[0] = sum_err_pos; 
+	perr[1] = sum_err_ori; 
+
+	return sum_err_pos;
+
+}
+
 Case_forward::Case_forward(){}
 Case_forward::~Case_forward(){}
 
-void Case_forward::init_pose_features()
+void Case_forward::init_pose_features(int N_feats)
 {
 
 	// features in front of the camera lie between x ~ [-2,2] y ~[-2, 2] z ~ [2, 10]
-	int N_feats = 300; 
+	// int N_feats = 300; 
 
 	mv_feats.resize(N_feats); 
 
@@ -70,7 +105,7 @@ void Case_forward::init_pose_features()
 	std::random_device rd; 
 	std::mt19937 gen(rd()); 
  	std::uniform_real_distribution<> xy_dis(-2.0, 2.0);
- 	std::uniform_real_distribution<> z_dis(2.0, 10.0);
+ 	std::uniform_real_distribution<> z_dis(2.0, 7.0); // 2-10
 
 	for(int i=0; i<N_feats; i++){
 		Feature& ft = mv_feats[i]; 
@@ -83,7 +118,7 @@ void Case_forward::init_pose_features()
 	// generate poses, move forward one step  
 
 	vector<double> p1{0, 0, 0, 0, 0, 0, 1.};
-	vector<double> p2{0, 0, 0.5, 0, 0, 0, 1.}; 
+	vector<double> p2{0, 0, 1.0, 0, 0, 0, 1.}; 
 
 	mv_gt_poses.push_back(p1); 
 	mv_gt_poses.push_back(p2);  
@@ -96,9 +131,9 @@ void Case_forward::init_pose_features()
 void Case_forward::gen_observations()
 {
 	// mv_poses = mv_gt_poses;
-	 mv_poses[1][0] += 0.1; 
-	 mv_poses[1][1] += 0.1; 
-	 mv_poses[1][2] -= 0.1;
+	// mv_poses[1][0] += 0.1; 
+	// mv_poses[1][1] += 0.1; 
+	// mv_poses[1][2] -= 0.1;
 
 
 	for(int j=0; j<mv_gt_poses.size(); j++){

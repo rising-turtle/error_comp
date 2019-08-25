@@ -20,6 +20,14 @@ enum SIZE_PARAMETERIZATION
     SIZE_FEATURE = 1
 };
 
+
+enum FACTOR_TYPE
+{
+    TRANSFER_E = 1, 
+    SAMPSON, 
+    SAMPSON_D 
+};
+
 class Estimator
 {
 public:
@@ -28,7 +36,7 @@ public:
 
     void before_optimize(Case& ca);
 
-    void optimize(Case* ); 
+    void optimize(Case* , double* perr = 0); 
 
 	int m_cnt_pose; 
 	int m_cnt_feat;
@@ -40,6 +48,8 @@ public:
     double para_Retrive_Pose[SIZE_POSE];
     double para_Td[1][1];
     double para_Tr[1][1];
+
+    FACTOR_TYPE m_factor_type; 
 
     // Matrix3d ric[2];
     // Vector3d tic[2];

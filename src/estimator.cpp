@@ -18,7 +18,8 @@
 using namespace std; 
 
 Estimator::Estimator():m_cnt_pose(0),
-m_cnt_feat(0){}
+m_cnt_feat(0),
+m_factor_type(TRANSFER_E){}
 Estimator::~Estimator(){}
 
 void Estimator::before_optimize(Case& ca)
@@ -69,7 +70,7 @@ void Estimator::before_optimize(Case& ca)
 }
 
 
-void Estimator::optimize(Case* ca)
+void Estimator::optimize(Case* ca, double* perr)
 {
 	// build structure 
 	before_optimize(*ca); 
@@ -112,20 +113,29 @@ void Estimator::optimize(Case* ca)
     		int feat_id = ca->mv_feats[i].mv_feat_idx[j]; 
     		Eigen::Vector3d pj(ca->mv_obs[node_id][feat_id].xy[0], ca->mv_obs[node_id][feat_id].xy[1], 1.); 
     		
-    		// ProjectionFactor *f = new ProjectionFactor(pi, pj); 
-            SampsonFactor *f = new SampsonFactor(pi, pj); 
-    		// f->sqrt_info = 1 * Eigen::Matrix2d::Identity(); 
+
+            if(m_factor_type == FACTOR_TYPE::TRANSFER_E){
+    		    ProjectionFactor *f = new ProjectionFactor(pi, pj); 
+                problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
+                para_Ex_Pose[0], para_Feature[i]);
+            }else if(m_factor_type == FACTOR_TYPE::SAMPSON){
+                SampsonFactor *f = new SampsonFactor(pi, pj); 
+                problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
+                    para_Ex_Pose[0], para_Feature[i]);
+            }else if(m_factor_type == FACTOR_TYPE::SAMPSON_D){
+                SampsonFactorWithLambda *f = new SampsonFactorWithLambda(pi, pj); 
+                problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
+                    para_Ex_Pose[0], para_Feature[i]);
+            }
+            // 
 
     		// Eigen::Matrix<double, 4, 4> sqrt_info = 24 * Eigen::Matrix<double, 4, 4>::Identity();
     		// ceres::CostFunction* f =
       			// new ceres::AutoDiffCostFunction<SampsonCostFunctor, 4, 7, 7, 7, 1>(
         			// new SampsonCostFunctor(pi, pj, sqrt_info));
 
-    		problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
-    			para_Ex_Pose[0], para_Feature[i]);
     		problem.SetParameterBlockConstant(para_Feature[i]); 
     		++feat_fac_cnt; 
-
     	}
     }
 
@@ -146,5 +156,11 @@ void Estimator::optimize(Case* ca)
 			cout<<para_Pose[i][j]<<" ";
 		cout<<endl;
 	}
+
+    if(perr != NULL){
+        ca->rmse(para_Pose, perr); 
+    }
+
+    return ;
 
 }

@@ -17,7 +17,7 @@ SampsonFactor::SampsonFactor(const Eigen::Vector3d &_pts_i, const Eigen::Vector3
 // const SampsonCostFunctor* functor)
  : pts_i(_pts_i), pts_j(_pts_j)//, functor_(functor)
 {
-	SampsonFactor::sqrt_info = Eigen::Matrix<double, 4, 4>::Identity(); 
+	SampsonFactor::sqrt_info = 24* Eigen::Matrix<double, 4, 4>::Identity(); 
 }
 
 
@@ -512,7 +512,7 @@ SampsonFactorWithLambda::SampsonFactorWithLambda(const Eigen::Vector3d &_pts_i, 
 // const SampsonCostFunctor* functor)
  : pts_i(_pts_i), pts_j(_pts_j)//, functor_(functor)
 {
-    SampsonFactorWithLambda::sqrt_info = Eigen::Matrix<double, 5, 5>::Identity(); 
+    SampsonFactorWithLambda::sqrt_info = 24*Eigen::Matrix<double, 5, 5>::Identity(); 
 }
 
 

@@ -45,9 +45,10 @@ public:
 	vector<vector<double>> mv_poses;  // each pose has seven parameters x,y,z,qx,qy,qz,qw 
 	vector<vector<FeatureMeasurement>> mv_obs; // observations at each pose 
 
-	virtual void init_pose_features(); // init features and poses 
+	virtual void init_pose_features(int N_feats=300); // init features and poses 
 	virtual void gen_observations();   // generate observations 
 	virtual void add_noise(double pix_std); // pixel std 
+	virtual double rmse(double p[][7], double* perr); // compute rmse 
 	vector<Feature> mv_feats; 			// ground truth features 
 	vector<vector<double>> mv_gt_poses; // ground truth poses
 };
@@ -57,7 +58,7 @@ class Case_forward : public Case
 public:
 	Case_forward(); 
 	virtual ~Case_forward(); 
-	virtual void init_pose_features();
+	virtual void init_pose_features(int N_feats = 300);
 	virtual void gen_observations(); 
 };
 
