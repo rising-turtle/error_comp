@@ -8,6 +8,8 @@
 
 #pragma once 
 
+#include <Eigen/Core>
+
 class Case;
 
 const int WINDOW_SIZE = 10;
@@ -25,18 +27,21 @@ enum FACTOR_TYPE
 {
     TRANSFER_E = 1, 
     SAMPSON, 
+    SAMPSON_C,
     SAMPSON_D 
 };
 
 class Estimator
 {
 public:
-	Estimator(); 
+	Estimator(double sigma_dis = 1.); 
 	~Estimator(); 
 
     void before_optimize(Case& ca);
 
     void optimize(Case* , double* perr = 0); 
+
+    double projDis(Eigen::Vector3d& pti, Eigen::Vector3d& ptj, double id_i, double pi[7], double pj[7]);
 
 	int m_cnt_pose; 
 	int m_cnt_feat;
@@ -50,6 +55,7 @@ public:
     double para_Tr[1][1];
 
     FACTOR_TYPE m_factor_type; 
+    double m_std_dis; // threshold for inliers
 
     // Matrix3d ric[2];
     // Vector3d tic[2];

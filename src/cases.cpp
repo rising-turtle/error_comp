@@ -13,7 +13,8 @@
 #include "Eigen/Core"
 #include "Eigen/Dense"
 
-Case::Case(){}
+Case::Case():
+m_thre_cnt_feats(100){}
 
 Case::~Case(){}
 
@@ -30,20 +31,29 @@ void Case::gen_observations()
 void Case::add_noise(double pix_std)
 {
 
-	std::random_device rd{};
-    std::mt19937 gen{rd()};
+	double focal_length = 400; 
+
+	static std::random_device rd{};
+    static std::mt19937 gen{rd()};
  
     // values near the mean are the most likely
     // standard deviation affects the dispersion of generated values from the mean
     std::normal_distribution<> noise{0,pix_std};
 
+    std::uniform_real_distribution<> rangle(0. , 360.);
+
+    double dis, angle; 
+
 	for(int i=0; i<mv_obs.size(); i++){
 		for(int j=0; j<mv_obs[i].size(); j++){
 			FeatureMeasurement& fm = mv_obs[i][j]; 
 
+			dis = noise(gen); 
+			angle = rangle(gen)*M_PI/180.; 
+
 			// add noise for pixel location 
-			fm.xy[0] += noise(gen); 
-			fm.xy[1] += noise(gen); 
+			fm.xy[0] += (dis*cos(angle)); // noise(gen); 
+			fm.xy[1] += (dis*sin(angle)); // noise(gen); 
 
 			// add noise to depth measurement 
 			// depth_std = 1.45e-3*(depth)^2 
@@ -98,7 +108,11 @@ void Case_forward::init_pose_features(int N_feats)
 	// features in front of the camera lie between x ~ [-2,2] y ~[-2, 2] z ~ [2, 10]
 	// int N_feats = 300; 
 
-	mv_feats.resize(N_feats); 
+	m_thre_cnt_feats = N_feats; 
+	int cnt_gen_feats = N_feats*3; 
+	if(cnt_gen_feats < 200) cnt_gen_feats = 200;
+
+	mv_feats.resize(cnt_gen_feats); // usually generate more features  
 
 	double x, y, z; 
 
@@ -107,7 +121,7 @@ void Case_forward::init_pose_features(int N_feats)
  	std::uniform_real_distribution<> xy_dis(-2.0, 2.0);
  	std::uniform_real_distribution<> z_dis(2.0, 7.0); // 2-10
 
-	for(int i=0; i<N_feats; i++){
+	for(int i=0; i<cnt_gen_feats; i++){
 		Feature& ft = mv_feats[i]; 
 		ft.m_id = i+1; 
 		ft.m_loc[0] = xy_dis(gen); 
@@ -131,10 +145,9 @@ void Case_forward::init_pose_features(int N_feats)
 void Case_forward::gen_observations()
 {
 	// mv_poses = mv_gt_poses;
-	// mv_poses[1][0] += 0.1; 
-	// mv_poses[1][1] += 0.1; 
-	// mv_poses[1][2] -= 0.1;
-
+	 // mv_poses[1][0] += 0.1; 
+	 // mv_poses[1][1] += 0.1; 
+	 // mv_poses[1][2] -= 0.1;
 
 	for(int j=0; j<mv_gt_poses.size(); j++){
 

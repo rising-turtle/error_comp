@@ -51,6 +51,7 @@ public:
 	virtual double rmse(double p[][7], double* perr); // compute rmse 
 	vector<Feature> mv_feats; 			// ground truth features 
 	vector<vector<double>> mv_gt_poses; // ground truth poses
+	int m_thre_cnt_feats; // maximum used features 
 };
 
 class Case_forward : public Case

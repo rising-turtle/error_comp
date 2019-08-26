@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
 
     // test_J1_lambda(); 
 
-    test_d_res_d_pose_lambda();
+    // test_d_res_d_pose_lambda();
 
 	return 0; 
 }
@@ -42,13 +42,14 @@ void test_d_res_d_pose_lambda()
     Eigen::Vector3d Pi(0, 0, 0);
     Eigen::Quaterniond Qi(1, 0, 0, 0);
 
-    Eigen::Vector3d Pj(0, 0, 0.2);
-    Eigen::Quaterniond Qj(0.98, 0, 0, 0.199);
+    Eigen::Vector3d Pj(0, 0, 1);
+    // Eigen::Quaterniond Qj(0.98, 0, 0, 0.199);
+    Eigen::Quaterniond Qj(1, 0, 0, 0);
 
     Eigen::Vector3d tic(0, 0, 0);
     Eigen::Quaterniond qic(1, 0, 0, 0);
 
-    double inv_dep_i = 0.5;
+    double inv_dep_i = 0.159081; // 0.5
 
     double ** para = new double *[4];//*[4]; 
 
@@ -67,7 +68,7 @@ void test_d_res_d_pose_lambda()
     para[3] = new double[1]; 
     para[3][0] = 1;
 
-    Eigen::Vector3d pts_i(0.5, 0.5, 1.); 
+    Eigen::Vector3d pts_i(-0.378468, -0.227461, 1.); 
     Eigen::Vector3d pts_camera_i = pts_i / inv_dep_i;
     Eigen::Vector3d pts_imu_i = qic * pts_camera_i + tic;
     Eigen::Vector3d pts_w = Qi * pts_imu_i + Pi;
@@ -75,8 +76,9 @@ void test_d_res_d_pose_lambda()
     Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
     
     double dep_j = pts_camera_j.z();
-    Eigen::Vector3d pts_j(pts_camera_j.x()/dep_j - 0.1, pts_camera_j.y()/dep_j -0.3, 1.);
- 
+    // Eigen::Vector3d pts_j(pts_camera_j.x()/dep_j - 0.1, pts_camera_j.y()/dep_j -0.3, 1.);
+    Eigen::Vector3d pts_j(-0.310314, 0.332055, 1.0);
+
     SampsonFactorWithLambda * f = new SampsonFactorWithLambda(pts_i, pts_j);
     f->check(para);
     return ; 
@@ -184,7 +186,7 @@ void test_J1_lambda()
 
 void test_d_res_d_pose()
 {
-	Eigen::Vector3d Pi(0, 0, 0);
+	/*Eigen::Vector3d Pi(0, 0, 0);
     Eigen::Quaterniond Qi(1, 0, 0, 0);
 
     Eigen::Vector3d Pj(0, 0, 0.2);
@@ -194,6 +196,19 @@ void test_d_res_d_pose()
     Eigen::Quaterniond qic(1, 0, 0, 0);
 
     double inv_dep_i = 0.5;
+*/
+
+    Eigen::Vector3d Pi(0, 0, 0);
+    Eigen::Quaterniond Qi(1, 0, 0, 0);
+
+    Eigen::Vector3d Pj(0.353549, -0.118023, 2.12716);
+    // Eigen::Quaterniond Qj(0.98, 0, 0, 0.199);
+    Eigen::Quaterniond Qj(0.9174208456426309, 0.3488320, -0.187413, 0.0391356);
+
+    Eigen::Vector3d tic(0, 0, 0);
+    Eigen::Quaterniond qic(1, 0, 0, 0);
+
+    double inv_dep_i = 0.470548; // 0.5
 
     double ** para = new double *[4];//*[4]; 
 
@@ -202,17 +217,18 @@ void test_d_res_d_pose()
     para[0][3] = 0; para[0][4] = 0; para[0][5] = 0; para[0][6] = 1; 
     
     para[1] = new double[7]; // pose_j
-    para[1][0] = 0; para[1][1] = 0; para[1][2] = 0.2; 
-    para[1][3] = 0; para[1][4] = 0; para[1][5] = 0.199; para[1][6] = 0.98; 
+    para[1][0] = Pj(0); para[1][1] = Pj(1); para[1][2] = Pj(2); 
+    para[1][3] = Qj.x(); para[1][4] = Qj.y(); para[1][5] = Qj.z(); para[1][6] = Qj.w(); 
   	
   	para[2] = new double[7]; // T_I2C
     para[2][0] = tic(0); para[2][1] = tic(1); para[2][2] = tic(2); 
     para[2][3] = qic.x(); para[2][4] = qic.y(); para[2][5] = qic.z(); para[2][6] = qic.w(); 
     
     para[3] = new double[1]; 
-    para[3][0] = 1;
+    para[3][0] = inv_dep_i;
 
-    Eigen::Vector3d pts_i(0.5, 0.5, 1.); 
+    // Eigen::Vector3d pts_i(0.5, 0.5, 1.); 
+    Eigen::Vector3d pts_i(-1.3163, 0.660394, 1.); 
     Eigen::Vector3d pts_camera_i = pts_i / inv_dep_i;
     Eigen::Vector3d pts_imu_i = qic * pts_camera_i + tic;
     Eigen::Vector3d pts_w = Qi * pts_imu_i + Pi;
@@ -220,10 +236,14 @@ void test_d_res_d_pose()
     Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
     
 	double dep_j = pts_camera_j.z();
-    Eigen::Vector3d pts_j(pts_camera_j.x()/dep_j - 0.1, pts_camera_j.y()/dep_j -0.3, 1.);
- 
-    SampsonFactor * f = new SampsonFactor(pts_i, pts_j);
-    f->check(para);
+    // Eigen::Vector3d pts_j(pts_camera_j.x()/dep_j - 0.1, pts_camera_j.y()/dep_j -0.3, 1.);
+    Eigen::Vector3d pts_j(-0.418893, 0.0679902, 1.0);
+
+    // SampsonFactor * f = new SampsonFactor(pts_i, pts_j);
+    // f->check(para);
+
+    SampsonFactorCross * f = new SampsonFactorCross(pts_i, pts_j);
+    f->check(para); 
     return ; 
 }
 

@@ -99,6 +99,25 @@ public:
 
 };
 
+class SampsonFactorCross : public ceres::SizedCostFunction<4, 7, 7, 7, 1>
+{
+public:
+	SampsonFactorCross(const Eigen::Vector3d& _pts_i, const Eigen::Vector3d& _pts_j);
+		//const SampsonCostFunctor* functor); 
+
+	virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
+
+	Eigen::Vector3d pts_i, pts_j;
+	static Eigen::Matrix<double, 4, 4> sqrt_info;  
+
+	void check(double **parameters); 
+
+// private:
+	// std::unique_ptr<const SampsonCostFunctor> functor_;
+
+};
+
+
 class SampsonFactorWithLambda : public ceres::SizedCostFunction<5, 7, 7, 7, 1>
 {
 public:
