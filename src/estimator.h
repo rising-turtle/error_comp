@@ -29,7 +29,8 @@ enum FACTOR_TYPE
     SAMPSON, 
     SAMPSON_C,
     SAMPSON_D,
-    SAMPSON_CD
+    SAMPSON_CD,
+    SAMPSON_E
 };
 
 class Estimator

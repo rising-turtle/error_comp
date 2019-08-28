@@ -173,6 +173,10 @@ void Estimator::optimize(Case* ca, double* perr)
                 SampsonFactorCross *f = new SampsonFactorCross(pi, pj); 
                 problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
                     para_Ex_Pose[0], para_Feature[i]);
+            }else if(m_factor_type == FACTOR_TYPE::SAMPSON_E){
+                SampsonFactorEssential *f = new SampsonFactorEssential(pi, pj); 
+                problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
+                    para_Ex_Pose[0], para_Feature[i]);
             }
             else if(m_factor_type == FACTOR_TYPE::SAMPSON_D){
                 SampsonFactorWithLambda *f = new SampsonFactorWithLambda(pi, pj); 
@@ -197,7 +201,7 @@ void Estimator::optimize(Case* ca, double* perr)
     }
 
     cout <<"estimator.cpp: used_features: "<<used_features-1<<endl;
-    cout <<"estimator.cpp: num_proj = "<<num_proj<<" average proj_dis: "<<(sum_proj_dis/(num_proj+1e-6))*400<<endl; 
+    cout <<"estimator.cpp: num_proj = "<<num_proj<<" average proj_dis: "<<(sum_proj_dis/(num_proj+1e-6))*240<<endl; 
     // cout <<"estimator.cpp: valid feature factor number = "<<feat_fac_cnt<<endl;
 
     // solve the problem 
@@ -205,7 +209,7 @@ void Estimator::optimize(Case* ca, double* perr)
     options.linear_solver_type = ceres::DENSE_SCHUR; 
     options.trust_region_strategy_type = ceres::DOGLEG; 
     options.max_num_iterations = 100; 
-    // options.minimizer_progress_to_stdout = true;
+    options.minimizer_progress_to_stdout = true;
     ceres::Solver::Summary summary; 
     ceres::Solve(options, &problem, &summary); 
 	cout << summary.BriefReport() << endl;

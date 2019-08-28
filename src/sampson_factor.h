@@ -117,6 +117,20 @@ public:
 
 };
 
+class SampsonFactorEssential : public ceres::SizedCostFunction<4, 7, 7, 7, 1>
+{
+public:
+	SampsonFactorEssential(const Eigen::Vector3d& _pts_i, const Eigen::Vector3d& _pts_j);
+		//const SampsonCostFunctor* functor); 
+
+	virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
+
+	Eigen::Vector3d pts_i, pts_j;
+	static Eigen::Matrix<double, 4, 4> sqrt_info;  
+
+	void check(double **parameters); 
+
+};
 
 class SampsonFactorWithLambda : public ceres::SizedCostFunction<5, 7, 7, 7, 1>
 {

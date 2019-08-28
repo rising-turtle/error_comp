@@ -16,6 +16,8 @@
 
 using namespace std ; 
 
+double focal_length = 240.; 
+
 struct Result
 {
 public:
@@ -42,18 +44,22 @@ void test_noise(int N_feats = 300);
 
 void test_feat_num(double noise = 0.03); 
 
-FACTOR_TYPE g_fac_type = FACTOR_TYPE::SAMPSON_CD; // SAMPSON_C SAMPSON_D SAMPSON; //TRANSFER_E; 
+FACTOR_TYPE g_fac_type = FACTOR_TYPE::SAMPSON_E; // SAMPSON_C SAMPSON_CD SAMPSON_D SAMPSON; //TRANSFER_E; 
 
 int main(int argc, char* argv[])
 {
 
-	vector<FACTOR_TYPE> st{FACTOR_TYPE::SAMPSON_C, FACTOR_TYPE::TRANSFER_E}; 
+	vector<FACTOR_TYPE> st{FACTOR_TYPE::SAMPSON_C, FACTOR_TYPE::TRANSFER_E, FACTOR_TYPE::SAMPSON_E}; 
+
+	double e1, e2;
 
 	for(auto& a : st){
 		g_fac_type = a;
-		test_feat_num(5.); 
-		test_noise(30);
+		// test_feat_num(5.); 
+		// test_noise(30);
+		run_once(50, 2./focal_length,e1, e2 ); 
 	}
+	
 
 	return 1; 
 
@@ -66,7 +72,7 @@ void test_noise(int N_feats)
 	vector<double> ve_dis(N); 
 	vector<double> ve_ori(N); 
 	vector<Result> v_rec(noise.size()); 
-	double focal_length = 240; // 300; 
+	// double focal_length = 240; // 300; 
 	double err_dis, err_ori;
 
 	double mean_rmse_dis, std_rmse_dis, mean_rmse_ori, std_rmse_ori; 
@@ -112,7 +118,7 @@ void test_feat_num(double noise)
 	vector<double> ve_dis(N); 
 	vector<double> ve_ori(N); 
 
-	double focal_length = 240; // 300; 
+	// double focal_length = 240; // 300; 
 
 	double err_dis, err_ori;
 

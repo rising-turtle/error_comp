@@ -241,20 +241,20 @@ void test_d_res_d_pose()
     Eigen::Vector3d pts_j(-0.418893, 0.0679902, 1.0);
 
     {
-        // cout <<" check SampsonFactor: "<<endl; 
-        // SampsonFactor * f = new SampsonFactor(pts_i, pts_j);
-        // f->check(para);
+        cout <<" check SampsonFactor: "<<endl; 
+        SampsonFactorEssential * f = new SampsonFactorEssential(pts_i, pts_j);
+        f->check(para);
     }
     {
-        cout<<" check SampsonFactorCross: "<<endl; 
-        SampsonFactorCross * f = new SampsonFactorCross(pts_i, pts_j);
-        f->check(para); 
+        // cout<<" check SampsonFactorCross: "<<endl; 
+        // SampsonFactorCross * f = new SampsonFactorCross(pts_i, pts_j);
+        // f->check(para); 
     }
 
     {
-        cout <<" check SampsonFactorCrossWithLambda: "<<endl;
-        SampsonFactorCrossWithLambda * f = new SampsonFactorCrossWithLambda(pts_i, pts_j);
-        f->check(para);
+        // cout <<" check SampsonFactorCrossWithLambda: "<<endl;
+        // SampsonFactorCrossWithLambda * f = new SampsonFactorCrossWithLambda(pts_i, pts_j);
+        // f->check(para);
     }
 
     return ; 
