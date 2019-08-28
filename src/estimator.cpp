@@ -66,8 +66,8 @@ void Estimator::before_optimize(Case& ca)
 	para_Ex_Pose[0][6] = 1;
 	para_Tr[0][0] = 0; 
 	para_Td[0][0] = 0; 
-	cout <<"estimator.cpp: m_cnt_pose = "<<m_cnt_pose<<" m_cnt_feat = "<<m_cnt_feat<<endl;
-	cout <<"estimator.cpp: valid feat: "<<cnt_valid<<endl;
+	// cout <<"estimator.cpp: m_cnt_pose = "<<m_cnt_pose<<" m_cnt_feat = "<<m_cnt_feat<<endl;
+	// cout <<"estimator.cpp: valid feat: "<<cnt_valid<<endl;
 	return ; 
 }
 
@@ -178,6 +178,10 @@ void Estimator::optimize(Case* ca, double* perr)
                 SampsonFactorWithLambda *f = new SampsonFactorWithLambda(pi, pj); 
                 problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
                     para_Ex_Pose[0], para_Feature[i]);
+            } else if(m_factor_type == FACTOR_TYPE::SAMPSON_CD){
+                SampsonFactorCrossWithLambda *f = new SampsonFactorCrossWithLambda(pi, pj); 
+                problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
+                    para_Ex_Pose[0], para_Feature[i]);
             }
             problem.SetParameterBlockConstant(para_Feature[i]); 
             ++feat_fac_cnt; 
@@ -194,8 +198,7 @@ void Estimator::optimize(Case* ca, double* perr)
 
     cout <<"estimator.cpp: used_features: "<<used_features-1<<endl;
     cout <<"estimator.cpp: num_proj = "<<num_proj<<" average proj_dis: "<<(sum_proj_dis/(num_proj+1e-6))*400<<endl; 
-
-    cout <<"estimator.cpp: valid feature factor number = "<<feat_fac_cnt<<endl;
+    // cout <<"estimator.cpp: valid feature factor number = "<<feat_fac_cnt<<endl;
 
     // solve the problem 
     ceres::Solver::Options options; 

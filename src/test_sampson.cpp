@@ -79,7 +79,8 @@ void test_d_res_d_pose_lambda()
     // Eigen::Vector3d pts_j(pts_camera_j.x()/dep_j - 0.1, pts_camera_j.y()/dep_j -0.3, 1.);
     Eigen::Vector3d pts_j(-0.310314, 0.332055, 1.0);
 
-    SampsonFactorWithLambda * f = new SampsonFactorWithLambda(pts_i, pts_j);
+    // SampsonFactorWithLambda * f = new SampsonFactorWithLambda(pts_i, pts_j);
+    SampsonFactorCrossWithLambda * f = new SampsonFactorCrossWithLambda(pts_i, pts_j);
     f->check(para);
     return ; 
 }
@@ -239,11 +240,23 @@ void test_d_res_d_pose()
     // Eigen::Vector3d pts_j(pts_camera_j.x()/dep_j - 0.1, pts_camera_j.y()/dep_j -0.3, 1.);
     Eigen::Vector3d pts_j(-0.418893, 0.0679902, 1.0);
 
-    // SampsonFactor * f = new SampsonFactor(pts_i, pts_j);
-    // f->check(para);
+    {
+        // cout <<" check SampsonFactor: "<<endl; 
+        // SampsonFactor * f = new SampsonFactor(pts_i, pts_j);
+        // f->check(para);
+    }
+    {
+        cout<<" check SampsonFactorCross: "<<endl; 
+        SampsonFactorCross * f = new SampsonFactorCross(pts_i, pts_j);
+        f->check(para); 
+    }
 
-    SampsonFactorCross * f = new SampsonFactorCross(pts_i, pts_j);
-    f->check(para); 
+    {
+        cout <<" check SampsonFactorCrossWithLambda: "<<endl;
+        SampsonFactorCrossWithLambda * f = new SampsonFactorCrossWithLambda(pts_i, pts_j);
+        f->check(para);
+    }
+
     return ; 
 }
 

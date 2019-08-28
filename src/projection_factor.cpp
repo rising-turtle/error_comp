@@ -26,7 +26,7 @@ ProjectionFactor::ProjectionFactor(const Eigen::Vector3d &_pts_i, const Eigen::V
     tangent_base.block<1, 3>(1, 0) = b2.transpose();
 #endif
 
-    sqrt_info = 24 * Eigen::Matrix2d::Identity(); 
+    sqrt_info = 100 * Eigen::Matrix2d::Identity(); 
 
 };
 

@@ -28,7 +28,8 @@ enum FACTOR_TYPE
     TRANSFER_E = 1, 
     SAMPSON, 
     SAMPSON_C,
-    SAMPSON_D 
+    SAMPSON_D,
+    SAMPSON_CD
 };
 
 class Estimator

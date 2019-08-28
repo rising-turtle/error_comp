@@ -42,26 +42,31 @@ void test_noise(int N_feats = 300);
 
 void test_feat_num(double noise = 0.03); 
 
-FACTOR_TYPE g_fac_type = FACTOR_TYPE::TRANSFER_E; // SAMPSON_C SAMPSON_D SAMPSON; //TRANSFER_E; 
+FACTOR_TYPE g_fac_type = FACTOR_TYPE::SAMPSON_CD; // SAMPSON_C SAMPSON_D SAMPSON; //TRANSFER_E; 
 
 int main(int argc, char* argv[])
 {
 
-	test_noise(30);
+	vector<FACTOR_TYPE> st{FACTOR_TYPE::SAMPSON_C, FACTOR_TYPE::TRANSFER_E}; 
+
+	for(auto& a : st){
+		g_fac_type = a;
+		test_feat_num(5.); 
+		test_noise(30);
+	}
 
 	return 1; 
 
 }
 
-
 void test_noise(int N_feats)
 {
 	int N = 5000; // number of repeats
-	vector<double> noise{0.5, 1., 1.5, 2.0, 2.5, 3.0, 3.5, 4., 4.5, 5., 5.5, 6., 6.5, 7.0}; // , 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9, 2.1}; // , 0.1, 0.4, 0.7, 1.0, 1.4, 2.0, 3.0}; 
+	vector<double> noise{1., 1.5, 2.0, 2.5, 3.0, 3.5, 4., 4.5, 5., 5.5, 6., 6.5, 7.0, 7.5, 8.0, 8.5, 9.0, 9.5, 10., 10.5, 11., 11.5, 12.}; // , 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9, 2.1}; // , 0.1, 0.4, 0.7, 1.0, 1.4, 2.0, 3.0}; 
 	vector<double> ve_dis(N); 
 	vector<double> ve_ori(N); 
 	vector<Result> v_rec(noise.size()); 
-	double focal_length = 400; 
+	double focal_length = 240; // 300; 
 	double err_dis, err_ori;
 
 	double mean_rmse_dis, std_rmse_dis, mean_rmse_ori, std_rmse_ori; 
@@ -93,17 +98,22 @@ void test_noise(int N_feats)
 		save_in_file("sampson_c_err.log", v_rec);
 	}else if(g_fac_type == FACTOR_TYPE::SAMPSON_D){
 		save_in_file("sampson_d_err.log", v_rec); 
+	}else if(g_fac_type == FACTOR_TYPE::SAMPSON_CD){
+		save_in_file("sampson_cd_err.log", v_rec); 
 	}
 	return; 
 }
 
 void test_feat_num(double noise)
 {
-	int N = 1; 
-	vector<double> v_n_feats{10, 20, 30}; // , 0.1, 0.4, 0.7, 1.0, 1.4, 2.0, 3.0}; 
+	int N = 5000; 
+	vector<double> v_n_feats{10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120}; // , 0.1, 0.4, 0.7, 1.0, 1.4, 2.0, 3.0}; 
 	vector<Result> v_rec(v_n_feats.size()); 
 	vector<double> ve_dis(N); 
 	vector<double> ve_ori(N); 
+
+	double focal_length = 240; // 300; 
+
 	double err_dis, err_ori;
 
 	double mean_rmse_dis, std_rmse_dis, mean_rmse_ori, std_rmse_ori; 
@@ -114,7 +124,7 @@ void test_feat_num(double noise)
 		
 		for(int i=0; i<N; i++)
 		{
-			run_once(N_feats, noise, err_dis, err_ori); 
+			run_once(N_feats, noise/focal_length, err_dis, err_ori); 
 			ve_dis[i] = err_dis; 
 			ve_ori[i] = err_ori; 
 		}
@@ -131,6 +141,8 @@ void test_feat_num(double noise)
 		save_in_file("transfer_feat_err.log", v_rec);
 	}else if(g_fac_type == FACTOR_TYPE::SAMPSON){
 		save_in_file("sampson_feat_err.log", v_rec); 
+	}else if(g_fac_type == FACTOR_TYPE::SAMPSON_C){
+		save_in_file("sampson_c_feat_err.log", v_rec);
 	}else if(g_fac_type == FACTOR_TYPE::SAMPSON_D){
 		save_in_file("sampson_d_feat_err.log", v_rec); 
 	}
