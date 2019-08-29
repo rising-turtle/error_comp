@@ -14,7 +14,7 @@
 #include "Eigen/Dense"
 
 Case::Case():
-m_thre_cnt_feats(100){}
+m_thre_cnt_feats(110){}
 
 Case::~Case(){}
 
