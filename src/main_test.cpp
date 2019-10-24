@@ -1,7 +1,7 @@
 /*
 	Aug. 20, 2019, He Zhang, hzhang8@vcu.edu 
 
-	main test file 
+	main test file: compare sampson error with transfer error
 
 */
 

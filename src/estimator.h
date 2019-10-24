@@ -37,11 +37,11 @@ class Estimator
 {
 public:
 	Estimator(double sigma_dis = 1.); 
-	~Estimator(); 
+	virtual ~Estimator(); 
 
-    void before_optimize(Case& ca);
+    virtual void before_optimize(Case& ca);
 
-    void optimize(Case* , double* perr = 0); 
+    virtual void optimize(Case* , double* perr = 0); 
 
     double projDis(Eigen::Vector3d& pti, Eigen::Vector3d& ptj, double id_i, double pi[7], double pj[7]);
 
