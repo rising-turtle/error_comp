@@ -29,7 +29,6 @@ Estimator(sigma_dis)
 EstimatorDepth::~EstimatorDepth(){}
 
 
-
 void EstimatorDepth::optimize(Case* ca, double* perr)
 {
 	// build structure 
