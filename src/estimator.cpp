@@ -61,9 +61,16 @@ void Estimator::before_optimize(Case& ca)
 	}
 
 	// assign ric 
-	for(int i=0; i<6; i++)
+	for(int i=0; i<6; i++){
 		para_Ex_Pose[0][i] = 0; 
+        para_Ex_Pose[1][i] = 0; 
+    }
 	para_Ex_Pose[0][6] = 1;
+    para_Ex_Pose[1][6] = 1; 
+
+    // stereo camera 
+    para_Ex_Pose[1][0] = FeatureMeasurement::rig_len; 
+
 	para_Tr[0][0] = 0; 
 	para_Td[0][0] = 0; 
 	// cout <<"estimator.cpp: m_cnt_pose = "<<m_cnt_pose<<" m_cnt_feat = "<<m_cnt_feat<<endl;

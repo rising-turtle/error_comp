@@ -6,21 +6,31 @@
 
 */
 
+#include "cases.h"
 #include "estimator_depth_factor.h"
 #include "projection_factor.h"
 #include "projectionOneFrameTwoCamFactor.h"
 #include "projectionTwoFrameOneCamFactor.h"
 #include "projectionTwoFrameTwoCamFactor.h"
+#include "pose_local_parameterization.h"
 
-EstiamatorDepth::EstiamatorDepth(double sigma_dis):
+using namespace Eigen;
+
+EstimatorDepth::EstimatorDepth(double sigma_dis):
 Estimator(sigma_dis)
-{}
+{
 
-EstiamatorDepth::~EstiamatorDepth(){}
+	ProjectionTwoFrameOneCamFactor::sqrt_info = sigma_dis * Matrix2d::Identity(); 
+	ProjectionOneFrameTwoCamFactor::sqrt_info = sigma_dis * Matrix2d::Identity(); 
+	ProjectionTwoFrameTwoCamFactor::sqrt_info = sigma_dis * Matrix2d::Identity();
+
+}
+
+EstimatorDepth::~EstimatorDepth(){}
 
 
 
-void EstiamatorDepth::optimize(Case* ca, double* perr)
+void EstimatorDepth::optimize(Case* ca, double* perr)
 {
 	// build structure 
 	before_optimize(*ca); 
@@ -42,12 +52,19 @@ void EstiamatorDepth::optimize(Case* ca, double* perr)
     // problem.AddParameterBlock(para_Td[0], 1);
     // problem.SetParameterBlockConstant(para_Td[0]); 
 
-    // ex pose
-    ceres::LocalParameterization *local_param = new PoseLocalParameterization; 
-    problem.AddParameterBlock(para_Ex_Pose[0], 7, local_param); 
-    problem.SetParameterBlockConstant(para_Ex_Pose[0]);
+	{
+    	// ex pose
+    	ceres::LocalParameterization *local_param = new PoseLocalParameterization; 
+    	problem.AddParameterBlock(para_Ex_Pose[0], 7, local_param); 
+    	problem.SetParameterBlockConstant(para_Ex_Pose[0]);
+	}
+	{
+		ceres::LocalParameterization *local_param = new PoseLocalParameterization; 
+    	problem.AddParameterBlock(para_Ex_Pose[1], 7, local_param); 
+    	problem.SetParameterBlockConstant(para_Ex_Pose[1]);
+	}
 
-    int feat_fac_cnt = 0; 
+    // int feat_fac_cnt = 0; 
 
     double sum_proj_dis = 0; 
     int num_proj = 0; 
@@ -69,41 +86,41 @@ void EstiamatorDepth::optimize(Case* ca, double* perr)
     	int ref_node_id = ca->mv_feats[i].mv_pose_id[ref_id]; 
     	int ref_feat_idx = ca->mv_feats[i].mv_feat_idx[ref_id]; 
     	Eigen::Vector3d pi(ca->mv_obs[ref_node_id][ref_feat_idx].xy[0], ca->mv_obs[ref_node_id][ref_feat_idx].xy[1], 1); 
+
+    	Vector2d velocity_i(0, 0); 
+    	Vector2d velocity_j(0, 0); 
+    	double cur_td = 0;
+
     	for(int j=0; j<ca->mv_feats[i].mv_pose_id.size(); j++){
     		int node_id = ca->mv_feats[i].mv_pose_id[j];
-    		if(node_id == ref_node_id) continue; 
     		int feat_id = ca->mv_feats[i].mv_feat_idx[j]; 
     		Eigen::Vector3d pj(ca->mv_obs[node_id][feat_id].xy[0], ca->mv_obs[node_id][feat_id].xy[1], 1.); 
-    		
-            // detect whether this pair of matched features is an inlier 
+    		Eigen::Vector3d right_pj(ca->mv_obs[node_id][feat_id].r_xy[0], ca->mv_obs[node_id][feat_id].r_xy[1], 1.); 
 
             double proj_dis = projDis(pi, pj, para_Feature[i][0], para_Pose[ref_node_id], para_Pose[node_id]);
 
             sum_proj_dis += proj_dis; 
             num_proj ++;
 
-            // if(proj_dis > m_std_dis*3){
-                // continue; 
-            // }
-       
+    		if(node_id != ref_node_id){
+    			// 1. add projection factor 
+    			ProjectionTwoFrameOneCamFactor* f = new ProjectionTwoFrameOneCamFactor(pi, pj, velocity_i, velocity_j, cur_td, cur_td); 
+    			problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Feature[i], para_Td[0]); 
 
-            {
-    		    ProjectionFactor *f = new ProjectionFactor(pi, pj); 
-                problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], 
-                para_Ex_Pose[0], para_Feature[i]);
-            }
-            problem.SetParameterBlockConstant(para_Feature[i]); 
-            ++feat_fac_cnt; 
-            
-            // 
+    			// 2. add stereo factor 
+    			ProjectionTwoFrameTwoCamFactor* fs = new ProjectionTwoFrameTwoCamFactor(pi, right_pj, velocity_i, velocity_j, cur_td, cur_td); 
+    			problem.AddResidualBlock(fs, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Ex_Pose[1], para_Feature[i], para_Td[0]);
+    		}else{
 
-    		// Eigen::Matrix<double, 4, 4> sqrt_info = 24 * Eigen::Matrix<double, 4, 4>::Identity();
-    		// ceres::CostFunction* f =
-      			// new ceres::AutoDiffCostFunction<SampsonCostFunctor, 4, 7, 7, 7, 1>(
-        			// new SampsonCostFunctor(pi, pj, sqrt_info));
-    		
+    			// 3. add stereo factor 
+    			ProjectionOneFrameTwoCamFactor* fs = new ProjectionOneFrameTwoCamFactor(pi, right_pj, velocity_i, velocity_j, cur_td, cur_td); 
+    			problem.AddResidualBlock(fs, loss_function, para_Ex_Pose[0], para_Ex_Pose[1], para_Feature[i], para_Td[0]); 
+    		}
+
+            // ++feat_fac_cnt; 
     	}
     }
+    problem.SetParameterBlockConstant(para_Td[0]);
 
     cout <<"estimator.cpp: used_features: "<<used_features-1<<endl;
     cout <<"estimator.cpp: num_proj = "<<num_proj<<" average proj_dis: "<<(sum_proj_dis/(num_proj+1e-6))*240<<endl; 

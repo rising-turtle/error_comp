@@ -34,6 +34,10 @@ public:
 	double xy[2]; // feature coordinate in the normalized plane, x/z, y/z
 	// float disparity; // disparity 
 	double depth; 
+
+	// to simulate a stereo vision observation 
+	double r_xy[2]; // right coordinate 
+	static double rig_len; // rig lenth 0.1 meter
 };
 
 class Case{

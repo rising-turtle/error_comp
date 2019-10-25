@@ -14,19 +14,15 @@
 #include <vector>
 #include <string> 
 
+double focal_length = 240.; 
+
+double run_once(int n_feature, double noise,  double& err_dis, double& err_ori ); 
 
 int main(int argc, char* argv[])
 {
 
 	double e1, e2;
-
-	for(auto& a : st){
-		g_fac_type = a;
-		// test_feat_num(5.); 
-		// test_noise(30);
-		run_once(50, 2./focal_length,e1, e2 ); 
-	}
-	
+    run_once(50, 2./focal_length,e1, e2 ); 
 
 	return 1; 
 
@@ -42,8 +38,7 @@ double run_once(int n_feature, double noise, double& err_dis, double& err_ori )
 	pc->add_noise(noise);
 
 	double err[2]; 
-	Estimator est(noise); 
-	est.m_factor_type = g_fac_type; // FACTOR_TYPE::TRANSFER_E; 
+	EstimatorDepth est(noise); 
 	est.optimize(pc, err); 
 
 	err_dis = err[0]; 

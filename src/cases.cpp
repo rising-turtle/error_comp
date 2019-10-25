@@ -13,6 +13,8 @@
 #include "Eigen/Core"
 #include "Eigen/Dense"
 
+double FeatureMeasurement::rig_len = 0.1; // rig length 
+
 Case::Case():
 m_thre_cnt_feats(110){}
 
@@ -60,6 +62,9 @@ void Case::add_noise(double pix_std)
 			double dpt_std = 1.45*0.001*fm.depth*fm.depth; 
 			std::normal_distribution<> depth_noise{0,dpt_std};
 			fm.depth += depth_noise(gen); 
+
+			fm.r_xy[0] = fm.xy[0] - FeatureMeasurement::rig_len / fm.depth; 
+    		fm.r_xy[1] = fm.xy[1]; 
 		}
 	}
 }
@@ -176,6 +181,10 @@ void Case_forward::gen_observations()
     				m.feat_index = obs.size();
     				m.xy[0] = px; m.xy[1] = py; 
     				m.depth = pts_j.z(); 
+
+    				// simulate stereo observation 
+    				m.r_xy[0] = px - FeatureMeasurement::rig_len / m.depth; 
+    				m.r_xy[1] = py; 
 
     				if(fi.mv_pose_id.size() == 0){
     					fi.m_ref_id = 0; // use the first observation 
