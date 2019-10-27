@@ -11,7 +11,7 @@ target_link_libraries(factors ${CERES_LIBRARIES})
 add_executable(error_comp main_test.cpp )
 target_link_libraries(error_comp factors ${CERES_LIBRARIES})
 
-add_executable(depth_factor_comp main_depth_factor.cpp)
+add_executable(depth_factor_comp main_depth_factor.cpp depth_factor.cpp)
 target_link_libraries(depth_factor_comp factors)
 
 add_executable(test_sampson test_sampson.cpp utility.cpp sampson_factor.cpp)

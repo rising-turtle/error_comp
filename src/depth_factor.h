@@ -12,23 +12,28 @@
 #include "utility.h"
 
 
-class SingleDepthFactor : public ceres::SizedCostFunction<1, 7, 1>
+class SingleInvDepthFactor : public ceres::SizedCostFunction<1, 1>
 {
-public:
-	SingleDepthFactor(const double T, )
+ public:
+ 	SingleInvDepthFactor(double inv_i); 
+ 	virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
+
+ 	double inv_depth_i;
+ 	static double sqrt_info; 
 };
 
 
 class ProjectionDepthFactor : public ceres::SizedCostFunction<1, 7, 7, 7, 1>
 {
 public:
-	ProjectionDepthFactor(double inv_depth_i, double inv_depth_j); 
+	ProjectionDepthFactor(const Eigen::Vector3d& _pts_i, double inv_j); 
 
 	virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const;
 	void check(double **parameters); 
 
-	double inv_depth_i; 
+	// double inv_depth_i; 
 	double inv_depth_j; 
+	Eigen::Vector3d pts_i; 
 	static double sqrt_info; 
 };
 
