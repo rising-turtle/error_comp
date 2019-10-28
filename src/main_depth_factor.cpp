@@ -98,12 +98,14 @@ void test_depth_factor()
     Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - Pj);
     Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
     
+    Eigen::Vector3d pts_j(-0.418893, 0.0679902, 1.0);
+
     double dep_j = pts_camera_j.z();
     double inv_dep_j = 1./dep_j;
     // Eigen::Vector3d pts_j(pts_camera_j.x()/dep_j - 0.1, pts_camera_j.y()/dep_j -0.3, 1.);
     // Eigen::Vector3d pts_j(-0.310314, 0.332055, 1.0);
 
-    ProjectionDepthFactor * f = new ProjectionDepthFactor(pts_i, inv_dep_j);
+    ProjectionDepthFactor * f = new ProjectionDepthFactor(pts_i, pts_j, inv_dep_j);
     f->check(para);
     return ; 
 }

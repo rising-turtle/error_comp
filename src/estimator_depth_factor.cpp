@@ -28,7 +28,7 @@ m_depth_factor_type(STEREO)
 
 	// ur = ul - rig_len * lambda; lambda = 1./depth
 	SingleInvDepthFactor::sqrt_info = sigma_dis/FeatureMeasurement::rig_len; 
-	ProjectionDepthFactor::sqrt_info = sigma_dis/FeatureMeasurement::rig_len;
+	ProjectionDepthFactor::sqrt_info = (sigma_dis/FeatureMeasurement::rig_len)*Eigen::Matrix3d::Identity();
 
 }
 
@@ -109,16 +109,19 @@ void EstimatorDepth::optimize(Case* ca, double* perr)
             num_proj ++;
 
     		if(node_id != ref_node_id){
-    			// 1. add projection factor 
-    			ProjectionTwoFrameOneCamFactor* f = new ProjectionTwoFrameOneCamFactor(pi, pj, velocity_i, velocity_j, cur_td, cur_td); 
-    			problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Feature[i], para_Td[0]); 
+
 
                 if(m_depth_factor_type == STEREO){
-    			// 2. add stereo factor 
+                    // 1. add projection factor 
+                    ProjectionTwoFrameOneCamFactor* f = new ProjectionTwoFrameOneCamFactor(pi, pj, velocity_i, velocity_j, cur_td, cur_td); 
+                    problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Feature[i], para_Td[0]); 
+
+    			    // 2. add stereo factor 
                     ProjectionTwoFrameTwoCamFactor* fs = new ProjectionTwoFrameTwoCamFactor(pi, right_pj, velocity_i, velocity_j, cur_td, cur_td); 
                     problem.AddResidualBlock(fs, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Ex_Pose[1], para_Feature[i], para_Td[0]);
                 }else if(m_depth_factor_type == RGBD){
-                    ProjectionDepthFactor *fs = new ProjectionDepthFactor(pi, inv_depth); 
+                    // 1. add projection depth factor 
+                    ProjectionDepthFactor *fs = new ProjectionDepthFactor(pi, pj, inv_depth); 
                     problem.AddResidualBlock(fs, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Feature[i]);
                 }
     		}else{
@@ -137,7 +140,8 @@ void EstimatorDepth::optimize(Case* ca, double* perr)
             // ++feat_fac_cnt; 
     	}
     }
-    problem.SetParameterBlockConstant(para_Td[0]);
+    if(m_depth_factor_type == STEREO)
+        problem.SetParameterBlockConstant(para_Td[0]);
 
     cout <<"estimator.cpp: used_features: "<<used_features-1<<endl;
     cout <<"estimator.cpp: num_proj = "<<num_proj<<" average proj_dis: "<<(sum_proj_dis/(num_proj+1e-6))*240<<endl; 
