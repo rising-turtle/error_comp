@@ -26,4 +26,7 @@ public:
     virtual void optimize(Case* , double* perr = 0); 
 
     DEPTH_FACTOR_TYPE m_depth_factor_type; 
+
+    
+
 };

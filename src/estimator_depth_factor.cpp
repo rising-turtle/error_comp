@@ -13,16 +13,22 @@
 #include "projectionTwoFrameOneCamFactor.h"
 #include "projectionTwoFrameTwoCamFactor.h"
 #include "pose_local_parameterization.h"
+#include "depth_factor.h"
 
 using namespace Eigen;
 
 EstimatorDepth::EstimatorDepth(double sigma_dis):
-Estimator(sigma_dis)
+Estimator(sigma_dis),
+m_depth_factor_type(STEREO)
 {
 
 	ProjectionTwoFrameOneCamFactor::sqrt_info = sigma_dis * Matrix2d::Identity(); 
 	ProjectionOneFrameTwoCamFactor::sqrt_info = sigma_dis * Matrix2d::Identity(); 
 	ProjectionTwoFrameTwoCamFactor::sqrt_info = sigma_dis * Matrix2d::Identity();
+
+	// ur = ul - rig_len * lambda; lambda = 1./depth
+	SingleInvDepthFactor::sqrt_info = sigma_dis/FeatureMeasurement::rig_len; 
+	ProjectionDepthFactor::sqrt_info = sigma_dis/FeatureMeasurement::rig_len;
 
 }
 
@@ -95,6 +101,7 @@ void EstimatorDepth::optimize(Case* ca, double* perr)
     		int feat_id = ca->mv_feats[i].mv_feat_idx[j]; 
     		Eigen::Vector3d pj(ca->mv_obs[node_id][feat_id].xy[0], ca->mv_obs[node_id][feat_id].xy[1], 1.); 
     		Eigen::Vector3d right_pj(ca->mv_obs[node_id][feat_id].r_xy[0], ca->mv_obs[node_id][feat_id].r_xy[1], 1.); 
+            double inv_depth = 1./ca->mv_obs[node_id][feat_id].depth; 
 
             double proj_dis = projDis(pi, pj, para_Feature[i][0], para_Pose[ref_node_id], para_Pose[node_id]);
 
@@ -106,14 +113,25 @@ void EstimatorDepth::optimize(Case* ca, double* perr)
     			ProjectionTwoFrameOneCamFactor* f = new ProjectionTwoFrameOneCamFactor(pi, pj, velocity_i, velocity_j, cur_td, cur_td); 
     			problem.AddResidualBlock(f, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Feature[i], para_Td[0]); 
 
+                if(m_depth_factor_type == STEREO){
     			// 2. add stereo factor 
-    			ProjectionTwoFrameTwoCamFactor* fs = new ProjectionTwoFrameTwoCamFactor(pi, right_pj, velocity_i, velocity_j, cur_td, cur_td); 
-    			problem.AddResidualBlock(fs, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Ex_Pose[1], para_Feature[i], para_Td[0]);
+                    ProjectionTwoFrameTwoCamFactor* fs = new ProjectionTwoFrameTwoCamFactor(pi, right_pj, velocity_i, velocity_j, cur_td, cur_td); 
+                    problem.AddResidualBlock(fs, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Ex_Pose[1], para_Feature[i], para_Td[0]);
+                }else if(m_depth_factor_type == RGBD){
+                    ProjectionDepthFactor *fs = new ProjectionDepthFactor(pi, inv_depth); 
+                    problem.AddResidualBlock(fs, loss_function, para_Pose[ref_node_id], para_Pose[node_id], para_Ex_Pose[0], para_Feature[i]);
+                }
     		}else{
 
+                if(m_depth_factor_type == STEREO){
     			// 3. add stereo factor 
-    			ProjectionOneFrameTwoCamFactor* fs = new ProjectionOneFrameTwoCamFactor(pi, right_pj, velocity_i, velocity_j, cur_td, cur_td); 
-    			problem.AddResidualBlock(fs, loss_function, para_Ex_Pose[0], para_Ex_Pose[1], para_Feature[i], para_Td[0]); 
+                    ProjectionOneFrameTwoCamFactor* fs = new ProjectionOneFrameTwoCamFactor(pi, right_pj, velocity_i, velocity_j, cur_td, cur_td); 
+                    problem.AddResidualBlock(fs, loss_function, para_Ex_Pose[0], para_Ex_Pose[1], para_Feature[i], para_Td[0]); 
+                }else if(m_depth_factor_type == RGBD){
+                    SingleInvDepthFactor* fs = new SingleInvDepthFactor(inv_depth); 
+                    problem.AddResidualBlock(fs, loss_function, para_Feature[i]);
+                }
+
     		}
 
             // ++feat_fac_cnt; 

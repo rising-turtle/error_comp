@@ -12,7 +12,7 @@
 #include "utility.h"
 
 
-class SingleInvDepthFactor : public ceres::SizedCostFunction<1, 1>
+class SingleInvDepthFactor : public ceres::SizedCostFunction<1, 7, 1>
 {
  public:
  	SingleInvDepthFactor(double inv_i); 

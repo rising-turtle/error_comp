@@ -25,8 +25,8 @@ int main(int argc, char* argv[])
 {
 
 	double e1, e2;
-    // run_once(50, 2./focal_length,e1, e2 ); 
-	test_depth_factor(); 
+    run_once(50, 2./focal_length,e1, e2 ); 
+	// test_depth_factor(); 
 	return 1; 
 
 }
@@ -41,9 +41,16 @@ double run_once(int n_feature, double noise, double& err_dis, double& err_ori )
 	pc->add_noise(noise);
 
 	double err[2]; 
-	EstimatorDepth est(noise); 
-	est.optimize(pc, err); 
-
+	{
+		EstimatorDepth est(noise); 
+		est.optimize(pc, err); 
+	}
+	cout<<endl<<"run it again!"<<endl; 
+	{
+		EstimatorDepth est(noise); 
+		est.m_depth_factor_type = RGBD; 
+		est.optimize(pc, err); 
+	}
 	err_dis = err[0]; 
 	err_ori = err[1]; 
 

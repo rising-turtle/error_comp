@@ -62,7 +62,7 @@ bool ProjectionDepthFactor::Evaluate(double const *const *parameters, double *re
     Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
 
     double dep_j = pts_camera_j.z(); 
-    residuals[0] = (dep_j) - 1./inv_depth_j;
+    residuals[0] = (1./dep_j) - inv_depth_j;
     residuals[0] = sqrt_info * residuals[0]; 
 
     if(jacobians){
@@ -71,6 +71,8 @@ bool ProjectionDepthFactor::Evaluate(double const *const *parameters, double *re
         Eigen::Matrix3d Rj = Qj.toRotationMatrix();
         Eigen::Matrix3d ric = qic.toRotationMatrix();
 
+        double d_e_d_dep_j = -1./(dep_j*dep_j); 
+
         if(jacobians[0]){
             // d_e_d_pose_i
             Eigen::Map<Eigen::Matrix<double, 1, 7> > jacobian_pose_i(jacobians[0]); 
@@ -78,7 +80,7 @@ bool ProjectionDepthFactor::Evaluate(double const *const *parameters, double *re
             jaco_i.leftCols<3>() = ric.transpose() * Rj.transpose();
             jaco_i.rightCols<3>() = ric.transpose() * Rj.transpose() * Ri * -Utility::skewSymmetric(pts_imu_i);
             for(int i=0; i<6; i++)
-                jacobian_pose_i(i) = sqrt_info * jaco_i(2, i);
+                jacobian_pose_i(i) = sqrt_info * d_e_d_dep_j * jaco_i(2, i);
             jacobian_pose_i(6) = 0; 
         }
 
@@ -90,7 +92,7 @@ bool ProjectionDepthFactor::Evaluate(double const *const *parameters, double *re
             jaco_j.rightCols<3>() = ric.transpose() * Utility::skewSymmetric(pts_imu_j);
 
             for(int i=0; i<6; i++)
-                jacobian_pose_j(i) = sqrt_info * jaco_j(2, i);
+                jacobian_pose_j(i) = sqrt_info * d_e_d_dep_j * jaco_j(2, i);
             jacobian_pose_j(6) = 0; 
         }
 
@@ -104,7 +106,7 @@ bool ProjectionDepthFactor::Evaluate(double const *const *parameters, double *re
                                      Utility::skewSymmetric(ric.transpose() * (Rj.transpose() * (Ri * tic + Pi - Pj) - tic));
 
             for(int i=0; i<6; i++)
-                jacobian_ex_pose(i) = sqrt_info * jaco_ex(2, i);
+                jacobian_ex_pose(i) = sqrt_info * d_e_d_dep_j * jaco_ex(2, i);
             jacobian_ex_pose(6) = 0; 
         }
 
@@ -112,7 +114,7 @@ bool ProjectionDepthFactor::Evaluate(double const *const *parameters, double *re
             // d_e_d_inv_depth_i 
             Eigen::Matrix<double, 3, 1> jaco_lambda;
             jaco_lambda = ric.transpose() * Rj.transpose() * Ri * ric * pts_i * -1.0 / (inv_dep_i * inv_dep_i);
-            jacobians[3][0] = sqrt_info * jaco_lambda(2); 
+            jacobians[3][0] = sqrt_info * d_e_d_dep_j * jaco_lambda(2); 
         }
 
     }
@@ -162,7 +164,8 @@ void ProjectionDepthFactor::check(double **parameters)
 
     double residual; 
     double dep_j = pts_camera_j.z();
-    residual = (dep_j) - 1./inv_depth_j;
+    // residual = (dep_j) - 1./inv_depth_j;
+    residual = 1./dep_j - inv_depth_j;
     residual = sqrt_info * residual;
 
     puts("num");
@@ -208,7 +211,8 @@ void ProjectionDepthFactor::check(double **parameters)
 
         double tmp_residual;
         double dep_j = pts_camera_j.z();
-        tmp_residual = dep_j - 1./inv_depth_j;
+        // tmp_residual = dep_j - 1./inv_depth_j;
+        tmp_residual = 1./dep_j - inv_depth_j;
         tmp_residual = sqrt_info * tmp_residual;
         num_jacobian(k) = (tmp_residual - residual) / eps;
     }
