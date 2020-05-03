@@ -604,191 +604,195 @@ bool SampsonFactorCross::Evaluate(double const *const *parameters, double *resid
         Eigen::Matrix<double, 4, 2> JJ_new; 
         Eigen::Matrix<double, 2,1> epsilon_new; 
         Eigen::Matrix<double, 4,1> residual_new; 
-
-        if(jacobians[0]){
-
-            Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]); 
-
-            Eigen::Matrix<double, 3, 6> jaco_i; // d_epsilon_d_pose_i
-            jaco_i.leftCols<3>() = ric.transpose() * Rj.transpose();
-            jaco_i.rightCols<3>() = ric.transpose() * Rj.transpose() * Ri * -Utility::skewSymmetric(pts_imu_i);
-
-            // d_res_d_pi
-            for(int k=0; k<3; k++){
-                Eigen::Vector3d delta = Eigen::Vector3d(k==0, k==1, k==2)*eps; 
-                Eigen::Vector3d tmp_Pi = Pi + delta; 
-
-                Eigen::Vector3d pts_w = Qi * pts_imu_i + tmp_Pi;
-                Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - Pj);
-                Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
-
-                // epsilon_new = reduce * jaco_i.leftCols<3>() * delta; 
-                double dep_j = pts_camera_j.z();
-                // epsilon_new = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
-                epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
-
-                // compute J = d_epsilon_d_X, [2x4], where X = (pi_x, pi_y, pj_x, pj_y) 
-                // Eigen::Matrix<double, 2, 3> d_epsilon_d_pts_cam_j;
-                // d_epsilon_d_pts_cam_j << 1./dep_j, 0, -pts_camera_j.x()/(dep_j*dep_j), 
-                //            0, 1./dep_j, -pts_camera_j.y()/(dep_j*dep_j); 
-                //d_epsilon_d_pts_cam_j << 0., 1., -pts_j.y(), 
-                //                        -1, 0, pts_j.x(); 
-
-                Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_i = d_epsilon_d_pts_cam_j * d_pts_cam_j_d_pts_cam_i * d_pts_cam_i_d_pts_i; 
-                Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_j = Eigen::Matrix<double,2,2>::Identity(); 
-                d_epsilon_d_pts_j << 0, -dep_j,
-                                    dep_j, 0; 
-                J_new.block<2,2>(0,0) = d_epsilon_d_pts_i;
-                J_new.block<2,2>(0,2) = d_epsilon_d_pts_j; 
-
-                JtJ_new = J_new*J_new.transpose(); 
-                JJ_new = J_new.transpose()*JtJ_new.inverse(); 
-                residual_new = -sqrt_info*JJ_new*epsilon_new;
-                
-                // jacobian_pose_i.leftCols<3>() = -sqrt_info * JJ * reduce * jaco_i.leftCols<3>();
-                jacobian_pose_i.col(k) = (residual_new - residual)/eps; 
-            }
-
-            // d_res_d_qi 
-            for(int k=0; k<3; k++){
-
-                Eigen::Vector3d delta = Eigen::Vector3d(k==0, k==1, k==2)*eps; 
-                Eigen::Quaterniond tmp_Qi = Qi * Utility::deltaQ(delta);
-
-                Eigen::Vector3d pts_w = tmp_Qi * pts_imu_i + Pi;
-                Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - Pj);
-                Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
-
-                // epsilon_new = reduce * jaco_i.leftCols<3>() * delta; 
-                double dep_j = pts_camera_j.z();
-                // epsilon_new = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
-                // epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
-                epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
-
-                // compute J = d_epsilon_d_X, [2x4], where X = (pi_x, pi_y, pj_x, pj_y) 
-                // Eigen::Matrix<double, 2, 3> d_epsilon_d_pts_cam_j;
-                // d_epsilon_d_pts_cam_j << 1./dep_j, 0, -pts_camera_j.x()/(dep_j*dep_j), 
-                //            0, 1./dep_j, -pts_camera_j.y()/(dep_j*dep_j); 
-                Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_j = Eigen::Matrix<double,2,2>::Identity(); 
-                d_epsilon_d_pts_j << 0, -dep_j,
-                                    dep_j, 0; 
-                Eigen::Matrix<double, 3, 3> tmp_m = qic.inverse()*Qj.inverse()*tmp_Qi.toRotationMatrix()*qic.toRotationMatrix();
-                Eigen::Matrix<double, 2, 2> tmp_J = d_epsilon_d_pts_cam_j * tmp_m * d_pts_cam_i_d_pts_i;
-
-                J_new.block<2,2>(0,0) = tmp_J; 
-                J_new.block<2,2>(0,2) = d_epsilon_d_pts_j; 
-                JtJ_new = J_new*J_new.transpose(); 
-                JJ_new = J_new.transpose()*JtJ_new.inverse(); 
-
-                // Eigen::Matrix<double, 2, 1> tt = reduce * jaco_i.rightCols<3>() * (delta); 
-                // epsilon_new = epsilon + tt; // jaco_i.rightCols<3>() * (delta);
-
-                residual_new = -sqrt_info*JJ_new*epsilon_new;
-
-                jacobian_pose_i.col(k+3) = (residual_new - residual)/eps; 
-            }
-            jacobian_pose_i.rightCols<1>().setZero();
-            if(jacobian_pose_i.matrix().hasNaN()){
-                cout <<" pts_i: "<<pts_i<<" pts_j: "<<pts_j<<" lambda: "<<inv_dep_i<<endl;
-                cout <<" J = "<<J<<endl;
-                cout <<"residual: "<<residual<<endl;
-                cout <<"Pj = "<<Pj<<endl<<"Qj = "<<Qj.vec()<<endl; 
-                cout <<"Pi = "<<Pi<<endl<<"Qi = "<<Qi.vec()<<endl;
-            }
-
+        if(jacobians[0] && jacobians[1]){
+            compute_Jacobian_pose_i(parameters, jacobians); 
         }
-        if(jacobians[1]){
+        else{
+            if(jacobians[0]){
 
-            Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_j(jacobians[1]); 
+                Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]); 
 
-            Eigen::Matrix<double, 3, 6> jaco_j; // d_epsilon_d_pose_j
-            jaco_j.leftCols<3>() = ric.transpose() * -Rj.transpose();
-            jaco_j.rightCols<3>() = ric.transpose() * Utility::skewSymmetric(pts_imu_j);
+                Eigen::Matrix<double, 3, 6> jaco_i; // d_epsilon_d_pose_i
+                jaco_i.leftCols<3>() = ric.transpose() * Rj.transpose();
+                jaco_i.rightCols<3>() = ric.transpose() * Rj.transpose() * Ri * -Utility::skewSymmetric(pts_imu_i);
 
-            // d_res_d_pj
-            // jacobian_pose_j.leftCols<3>() = -sqrt_info * JJ * reduce * jaco_j.leftCols<3>();
+                // d_res_d_pi
+                for(int k=0; k<3; k++){
+                    Eigen::Vector3d delta = Eigen::Vector3d(k==0, k==1, k==2)*eps; 
+                    Eigen::Vector3d tmp_Pi = Pi + delta; 
 
-            // d_res_d_pj
-            for(int k=0; k<3; k++){
-                Eigen::Vector3d delta = Eigen::Vector3d(k==0, k==1, k==2)*eps; 
-                Eigen::Vector3d tmp_Pj = Pj + delta; 
+                    Eigen::Vector3d pts_w = Qi * pts_imu_i + tmp_Pi;
+                    Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - Pj);
+                    Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
 
-                Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - tmp_Pj);
-                Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
+                    // epsilon_new = reduce * jaco_i.leftCols<3>() * delta; 
+                    double dep_j = pts_camera_j.z();
+                    // epsilon_new = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
+                    epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
 
-                // epsilon_new = reduce * jaco_i.leftCols<3>() * delta; 
-                double dep_j = pts_camera_j.z();
-                // epsilon_new = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
-                epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
+                    // compute J = d_epsilon_d_X, [2x4], where X = (pi_x, pi_y, pj_x, pj_y) 
+                    // Eigen::Matrix<double, 2, 3> d_epsilon_d_pts_cam_j;
+                    // d_epsilon_d_pts_cam_j << 1./dep_j, 0, -pts_camera_j.x()/(dep_j*dep_j), 
+                    //            0, 1./dep_j, -pts_camera_j.y()/(dep_j*dep_j); 
+                    //d_epsilon_d_pts_cam_j << 0., 1., -pts_j.y(), 
+                    //                        -1, 0, pts_j.x(); 
 
-                // compute J = d_epsilon_d_X, [2x4], where X = (pi_x, pi_y, pj_x, pj_y) 
-                // Eigen::Matrix<double, 2, 3> d_epsilon_d_pts_cam_j;
-                // d_epsilon_d_pts_cam_j << 1./dep_j, 0, -pts_camera_j.x()/(dep_j*dep_j), 
-                //             0, 1./dep_j, -pts_camera_j.y()/(dep_j*dep_j); 
-                Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_j = Eigen::Matrix<double,2,2>::Identity(); 
-                d_epsilon_d_pts_j << 0, -dep_j,
-                                    dep_j, 0; 
-                Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_i = d_epsilon_d_pts_cam_j * d_pts_cam_j_d_pts_cam_i * d_pts_cam_i_d_pts_i; 
-                J_new.block<2,2>(0,0) = d_epsilon_d_pts_i;
-                J_new.block<2,2>(0,2) = d_epsilon_d_pts_j; 
+                    Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_i = d_epsilon_d_pts_cam_j * d_pts_cam_j_d_pts_cam_i * d_pts_cam_i_d_pts_i; 
+                    Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_j = Eigen::Matrix<double,2,2>::Identity(); 
+                    d_epsilon_d_pts_j << 0, -dep_j,
+                                        dep_j, 0; 
+                    J_new.block<2,2>(0,0) = d_epsilon_d_pts_i;
+                    J_new.block<2,2>(0,2) = d_epsilon_d_pts_j; 
 
-                JtJ_new = J_new*J_new.transpose(); 
-                JJ_new = J_new.transpose()*JtJ_new.inverse(); 
-                residual_new = -sqrt_info*JJ_new*epsilon_new;
-                
-                // jacobian_pose_i.leftCols<3>() = -sqrt_info * JJ * reduce * jaco_i.leftCols<3>();
-                jacobian_pose_j.col(k) = (residual_new - residual)/eps; 
+                    JtJ_new = J_new*J_new.transpose(); 
+                    JJ_new = J_new.transpose()*JtJ_new.inverse(); 
+                    residual_new = -sqrt_info*JJ_new*epsilon_new;
+                    
+                    // jacobian_pose_i.leftCols<3>() = -sqrt_info * JJ * reduce * jaco_i.leftCols<3>();
+                    jacobian_pose_i.col(k) = (residual_new - residual)/eps; 
+                }
+
+                // d_res_d_qi 
+                for(int k=0; k<3; k++){
+
+                    Eigen::Vector3d delta = Eigen::Vector3d(k==0, k==1, k==2)*eps; 
+                    Eigen::Quaterniond tmp_Qi = Qi * Utility::deltaQ(delta);
+
+                    Eigen::Vector3d pts_w = tmp_Qi * pts_imu_i + Pi;
+                    Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - Pj);
+                    Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
+
+                    // epsilon_new = reduce * jaco_i.leftCols<3>() * delta; 
+                    double dep_j = pts_camera_j.z();
+                    // epsilon_new = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
+                    // epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
+                    epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
+
+                    // compute J = d_epsilon_d_X, [2x4], where X = (pi_x, pi_y, pj_x, pj_y) 
+                    // Eigen::Matrix<double, 2, 3> d_epsilon_d_pts_cam_j;
+                    // d_epsilon_d_pts_cam_j << 1./dep_j, 0, -pts_camera_j.x()/(dep_j*dep_j), 
+                    //            0, 1./dep_j, -pts_camera_j.y()/(dep_j*dep_j); 
+                    Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_j = Eigen::Matrix<double,2,2>::Identity(); 
+                    d_epsilon_d_pts_j << 0, -dep_j,
+                                        dep_j, 0; 
+                    Eigen::Matrix<double, 3, 3> tmp_m = qic.inverse()*Qj.inverse()*tmp_Qi.toRotationMatrix()*qic.toRotationMatrix();
+                    Eigen::Matrix<double, 2, 2> tmp_J = d_epsilon_d_pts_cam_j * tmp_m * d_pts_cam_i_d_pts_i;
+
+                    J_new.block<2,2>(0,0) = tmp_J; 
+                    J_new.block<2,2>(0,2) = d_epsilon_d_pts_j; 
+                    JtJ_new = J_new*J_new.transpose(); 
+                    JJ_new = J_new.transpose()*JtJ_new.inverse(); 
+
+                    // Eigen::Matrix<double, 2, 1> tt = reduce * jaco_i.rightCols<3>() * (delta); 
+                    // epsilon_new = epsilon + tt; // jaco_i.rightCols<3>() * (delta);
+
+                    residual_new = -sqrt_info*JJ_new*epsilon_new;
+
+                    jacobian_pose_i.col(k+3) = (residual_new - residual)/eps; 
+                }
+                jacobian_pose_i.rightCols<1>().setZero();
+                if(jacobian_pose_i.matrix().hasNaN()){
+                    cout <<" pts_i: "<<pts_i<<" pts_j: "<<pts_j<<" lambda: "<<inv_dep_i<<endl;
+                    cout <<" J = "<<J<<endl;
+                    cout <<"residual: "<<residual<<endl;
+                    cout <<"Pj = "<<Pj<<endl<<"Qj = "<<Qj.vec()<<endl; 
+                    cout <<"Pi = "<<Pi<<endl<<"Qi = "<<Qi.vec()<<endl;
+                }
+
             }
+            if(jacobians[1]){
+
+                Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_j(jacobians[1]); 
+
+                Eigen::Matrix<double, 3, 6> jaco_j; // d_epsilon_d_pose_j
+                jaco_j.leftCols<3>() = ric.transpose() * -Rj.transpose();
+                jaco_j.rightCols<3>() = ric.transpose() * Utility::skewSymmetric(pts_imu_j);
+
+                // d_res_d_pj
+                // jacobian_pose_j.leftCols<3>() = -sqrt_info * JJ * reduce * jaco_j.leftCols<3>();
+
+                // d_res_d_pj
+                for(int k=0; k<3; k++){
+                    Eigen::Vector3d delta = Eigen::Vector3d(k==0, k==1, k==2)*eps; 
+                    Eigen::Vector3d tmp_Pj = Pj + delta; 
+
+                    Eigen::Vector3d pts_imu_j = Qj.inverse() * (pts_w - tmp_Pj);
+                    Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
+
+                    // epsilon_new = reduce * jaco_i.leftCols<3>() * delta; 
+                    double dep_j = pts_camera_j.z();
+                    // epsilon_new = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
+                    epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
+
+                    // compute J = d_epsilon_d_X, [2x4], where X = (pi_x, pi_y, pj_x, pj_y) 
+                    // Eigen::Matrix<double, 2, 3> d_epsilon_d_pts_cam_j;
+                    // d_epsilon_d_pts_cam_j << 1./dep_j, 0, -pts_camera_j.x()/(dep_j*dep_j), 
+                    //             0, 1./dep_j, -pts_camera_j.y()/(dep_j*dep_j); 
+                    Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_j = Eigen::Matrix<double,2,2>::Identity(); 
+                    d_epsilon_d_pts_j << 0, -dep_j,
+                                        dep_j, 0; 
+                    Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_i = d_epsilon_d_pts_cam_j * d_pts_cam_j_d_pts_cam_i * d_pts_cam_i_d_pts_i; 
+                    J_new.block<2,2>(0,0) = d_epsilon_d_pts_i;
+                    J_new.block<2,2>(0,2) = d_epsilon_d_pts_j; 
+
+                    JtJ_new = J_new*J_new.transpose(); 
+                    JJ_new = J_new.transpose()*JtJ_new.inverse(); 
+                    residual_new = -sqrt_info*JJ_new*epsilon_new;
+                    
+                    // jacobian_pose_i.leftCols<3>() = -sqrt_info * JJ * reduce * jaco_i.leftCols<3>();
+                    jacobian_pose_j.col(k) = (residual_new - residual)/eps; 
+                }
 
 
-            // d_res_d_qj
-            for(int k=0; k<3; k++){
+                // d_res_d_qj
+                for(int k=0; k<3; k++){
 
-                Eigen::Vector3d delta = Eigen::Vector3d(k==0, k==1, k==2)*eps; 
-                Eigen::Quaterniond tmp_Qj = Qj * Utility::deltaQ(delta); 
+                    Eigen::Vector3d delta = Eigen::Vector3d(k==0, k==1, k==2)*eps; 
+                    Eigen::Quaterniond tmp_Qj = Qj * Utility::deltaQ(delta); 
 
-                Eigen::Vector3d pts_imu_j = tmp_Qj.inverse() * (pts_w - Pj);
-                Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
+                    Eigen::Vector3d pts_imu_j = tmp_Qj.inverse() * (pts_w - Pj);
+                    Eigen::Vector3d pts_camera_j = qic.inverse() * (pts_imu_j - tic);
 
-                // epsilon_new = reduce * jaco_i.leftCols<3>() * delta; 
-                double dep_j = pts_camera_j.z();
-                // epsilon_new = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
-                epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
+                    // epsilon_new = reduce * jaco_i.leftCols<3>() * delta; 
+                    double dep_j = pts_camera_j.z();
+                    // epsilon_new = (pts_camera_j / dep_j).head<2>() - pts_j.head<2>();
+                    epsilon_new << pts_camera_j.y() - dep_j*pts_j.y(), -pts_camera_j.x() + dep_j * pts_j.x();
 
-                // compute J = d_epsilon_d_X, [2x4], where X = (pi_x, pi_y, pj_x, pj_y) 
-                // Eigen::Matrix<double, 2, 3> d_epsilon_d_pts_cam_j;
-                // d_epsilon_d_pts_cam_j << 1./dep_j, 0, -pts_camera_j.x()/(dep_j*dep_j), 
-                //            0, 1./dep_j, -pts_camera_j.y()/(dep_j*dep_j); 
+                    // compute J = d_epsilon_d_X, [2x4], where X = (pi_x, pi_y, pj_x, pj_y) 
+                    // Eigen::Matrix<double, 2, 3> d_epsilon_d_pts_cam_j;
+                    // d_epsilon_d_pts_cam_j << 1./dep_j, 0, -pts_camera_j.x()/(dep_j*dep_j), 
+                    //            0, 1./dep_j, -pts_camera_j.y()/(dep_j*dep_j); 
 
-                Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_j = Eigen::Matrix<double,2,2>::Identity(); 
-                d_epsilon_d_pts_j << 0, -dep_j,
-                                    dep_j, 0; 
+                    Eigen::Matrix<double, 2, 2> d_epsilon_d_pts_j = Eigen::Matrix<double,2,2>::Identity(); 
+                    d_epsilon_d_pts_j << 0, -dep_j,
+                                        dep_j, 0; 
 
-                Eigen::Matrix<double, 3, 3> tmp_m = qic.inverse()*tmp_Qj.inverse()*Qi.toRotationMatrix()*qic.toRotationMatrix();
-                Eigen::Matrix<double, 2, 2> tmp_J = d_epsilon_d_pts_cam_j * tmp_m * d_pts_cam_i_d_pts_i;
+                    Eigen::Matrix<double, 3, 3> tmp_m = qic.inverse()*tmp_Qj.inverse()*Qi.toRotationMatrix()*qic.toRotationMatrix();
+                    Eigen::Matrix<double, 2, 2> tmp_J = d_epsilon_d_pts_cam_j * tmp_m * d_pts_cam_i_d_pts_i;
 
-                J_new.block<2,2>(0,0) = tmp_J; 
-                J_new.block<2,2>(0,2) = d_epsilon_d_pts_j; 
-                JtJ_new = J_new*J_new.transpose(); 
-                JJ_new = J_new.transpose()*JtJ_new.inverse(); 
+                    J_new.block<2,2>(0,0) = tmp_J; 
+                    J_new.block<2,2>(0,2) = d_epsilon_d_pts_j; 
+                    JtJ_new = J_new*J_new.transpose(); 
+                    JJ_new = J_new.transpose()*JtJ_new.inverse(); 
 
-                // Eigen::Matrix<double, 2, 1> tt = reduce * jaco_j.rightCols<3>() * (delta); 
-                // epsilon_new = epsilon + tt;
+                    // Eigen::Matrix<double, 2, 1> tt = reduce * jaco_j.rightCols<3>() * (delta); 
+                    // epsilon_new = epsilon + tt;
 
-                residual_new = -sqrt_info*JJ_new*epsilon_new;
+                    residual_new = -sqrt_info*JJ_new*epsilon_new;
 
-                jacobian_pose_j.col(k+3) = (residual_new - residual)/eps; 
+                    jacobian_pose_j.col(k+3) = (residual_new - residual)/eps; 
+                }
+                jacobian_pose_j.rightCols<1>().setZero();
+
+                if(jacobian_pose_j.matrix().hasNaN()){
+                    cout <<" pts_i: "<<pts_i<<" pts_j: "<<pts_j<<" lambda: "<<inv_dep_i<<endl;
+                    cout <<" J = "<<J<<endl;
+                    cout <<"residual: "<<residual<<endl;
+                    cout <<"Pj = "<<Pj<<endl<<"Qj = "<<Qj.vec()<<endl; 
+                    cout <<"Pi = "<<Pi<<endl<<"Qi = "<<Qi.vec()<<endl;
+                }
+
             }
-            jacobian_pose_j.rightCols<1>().setZero();
-
-            if(jacobian_pose_j.matrix().hasNaN()){
-                cout <<" pts_i: "<<pts_i<<" pts_j: "<<pts_j<<" lambda: "<<inv_dep_i<<endl;
-                cout <<" J = "<<J<<endl;
-                cout <<"residual: "<<residual<<endl;
-                cout <<"Pj = "<<Pj<<endl<<"Qj = "<<Qj.vec()<<endl; 
-                cout <<"Pi = "<<Pi<<endl<<"Qi = "<<Qi.vec()<<endl;
-            }
-
         }
         if(jacobians[2]){
             //TODO: d_res_d_pose_ic 

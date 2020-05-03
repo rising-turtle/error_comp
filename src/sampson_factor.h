@@ -112,6 +112,10 @@ public:
 
 	void check(double **parameters); 
 
+	void compute_Jacobian_pose_i(double const *const *parameters, double** jacobians) const; 
+	void compute_Jacobian_pose_j(double const *const *parameters, double** jacobians) const; 
+
+
 // private:
 	// std::unique_ptr<const SampsonCostFunctor> functor_;
 
