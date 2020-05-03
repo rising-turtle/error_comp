@@ -605,7 +605,7 @@ bool SampsonFactorCross::Evaluate(double const *const *parameters, double *resid
         Eigen::Matrix<double, 2,1> epsilon_new; 
         Eigen::Matrix<double, 4,1> residual_new; 
         if(jacobians[0] && jacobians[1]){
-            compute_Jacobian_pose_i(parameters, jacobians); 
+            compute_Jacobian_pose(parameters, jacobians); 
         }
         else{
             if(jacobians[0]){

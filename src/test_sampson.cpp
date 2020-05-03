@@ -53,8 +53,8 @@ void test_sampson_jacobian()
     // Eigen::Quaterniond Qj(0.98, 0, 0, 0.199);
     Eigen::Quaterniond Qj(sqrt(1-SQ(0.4)-SQ(0.1)-SQ(0.2)), 0.4, 0.1, -0.2);
 
-    Eigen::Vector3d tic(0, 0, 0);
-    Eigen::Quaterniond qic(1, 0, 0, 0);
+    Eigen::Vector3d tic(0.3, -0.2, 1);
+    Eigen::Quaterniond qic(sqrt(1-SQ(0.2)-SQ(0.3)), 0.2, -0.3, 0);
 
     double inv_dep_i = 1/3.; // 0.5
 
@@ -79,7 +79,9 @@ void test_sampson_jacobian()
 
    {
         SampsonFactorCross * f = new SampsonFactorCross(pts_i, pts_j);
-        // f->compute_Jacobian_pose_i(para, NULL); 
+        // SampsonFactorEssential * f = new SampsonFactorEssential(pts_i, pts_j);
+
+        // f->compute_Jacobian_pose(para, NULL); 
         f->check(para);
     }
 

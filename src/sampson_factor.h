@@ -112,8 +112,8 @@ public:
 
 	void check(double **parameters); 
 
-	void compute_Jacobian_pose_i(double const *const *parameters, double** jacobians) const; 
-	void compute_Jacobian_pose_j(double const *const *parameters, double** jacobians) const; 
+	void compute_Jacobian_pose(double const *const *parameters, double** jacobians) const; 
+	// void compute_Jacobian_pose_j(double const *const *parameters, double** jacobians) const; 
 
 
 // private:
@@ -132,6 +132,8 @@ public:
 	Eigen::Vector3d pts_i, pts_j;
 	static Eigen::Matrix<double, 4, 4> sqrt_info;  
 
+	void compute_Jacobian_pose(double const *const *parameters, double** jacobians) const; 
+	
 	void check(double **parameters); 
 
 };
