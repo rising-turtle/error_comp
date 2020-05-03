@@ -326,7 +326,7 @@ namespace{
 		// dE_dtx = dE_dtx.transpose(); 
 		// dE_dty = dE_dty.transpose(); 
 		// dE_dtz = dE_dtz.transpose();
-		cout<<"dE_dtx: "<<endl<<dE_dtx<<endl;
+		// cout<<"dE_dtx: "<<endl<<dE_dtx<<endl;
 		Eigen::Map<Eigen::Matrix<double, 9, 1>> dE_dtx_c(dE_dtx.data());
 		Eigen::Map<Eigen::Matrix<double, 9, 1>> dE_dty_c(dE_dty.data()); 
 		Eigen::Map<Eigen::Matrix<double, 9, 1>> dE_dtz_c(dE_dtz.data());  
@@ -532,13 +532,14 @@ void SampsonFactorCross::compute_Jacobian_pose(double const *const *parameters, 
     // cout << "dse_dpose_i: "<<endl<<dse_dpose_i<<endl; 
     // cout << "dse_dpose_j: "<<endl<<dse_dpose_j<<endl; 
 
-    Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]); 
-    Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_j(jacobians[1]); 
-    jacobian_pose_i.setZero();
-    jacobian_pose_j.setZero(); 
-    jacobian_pose_i.block<4,6>(0,0) = -sqrt_info*dse_dpose_i;
-    jacobian_pose_j.block<4,6>(0,0) = -sqrt_info*dse_dpose_j;
-
+    if(jacobians!=NULL){
+	    Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]); 
+	    Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_j(jacobians[1]); 
+	    jacobian_pose_i.setZero();
+	    jacobian_pose_j.setZero(); 
+	    jacobian_pose_i.block<4,6>(0,0) = -sqrt_info*dse_dpose_i;
+	    jacobian_pose_j.block<4,6>(0,0) = -sqrt_info*dse_dpose_j;
+	}
     return ; 
 }
 
@@ -570,13 +571,13 @@ void SampsonFactorEssential::compute_Jacobian_pose(double const *const *paramete
     Eigen::Matrix3d M = pts_j * pts_i.transpose(); 
     Eigen::Matrix3d Mt = M.transpose(); 
     Eigen::Map<Matrix<double, 9, 1>> lM(Mt.data()); 
-    cout <<"lM: "<<endl<<lM<<endl; 
+    // cout <<"lM: "<<endl<<lM<<endl; 
     Vector3d li = E * pts_i; 
     Vector3d lj = E.transpose() * pts_j; 
 
     double a = li(0); double b = li(1); double c = lj(0); double d = lj(1); 
     double Ue = pts_j.transpose()*E * pts_i; 
-    double Le = sqrt(a*a + b*b + c*c + d*d); 
+    double Le = (a*a + b*b + c*c + d*d); 
 
     Matrix<double, 1, 6> dse_dpose_i, dse_dpose_j; 
     dse_dpose_i.setZero(); dse_dpose_j.setZero(); 
@@ -593,7 +594,7 @@ void SampsonFactorEssential::compute_Jacobian_pose(double const *const *paramete
     Matrix<double, 1, 6> db_dpose_i = pts_i(0)*dE_dpose_i.row(3) + pts_i(1)*dE_dpose_i.row(4) + dE_dpose_i.row(5); 
     Matrix<double, 1, 6> dc_dpose_i = pts_j(0)*dE_dpose_i.row(0) + pts_j(1)*dE_dpose_i.row(3) + dE_dpose_i.row(6); 
     Matrix<double, 1, 6> dd_dpose_i = pts_j(0)*dE_dpose_i.row(1) + pts_j(1)*dE_dpose_i.row(4) + dE_dpose_i.row(7); 
-    Matrix<double, 1, 6> dLe_dpose_i = -(a*da_dpose_i + b*db_dpose_i + c*dc_dpose_i + d*dd_dpose_i)/(Le*Le*Le);
+    Matrix<double, 1, 6> dLe_dpose_i = -2*(a*da_dpose_i + b*db_dpose_i + c*dc_dpose_i + d*dd_dpose_i)/(Le*Le);
     dse_dpose_i = dse_dpose_i + Ue*dLe_dpose_i; 
 
     // cout<<"Ue: "<<Ue<<" dLe_dpose_i: "<<endl<<dLe_dpose_i<<endl; 
@@ -602,8 +603,29 @@ void SampsonFactorEssential::compute_Jacobian_pose(double const *const *paramete
     Matrix<double, 1, 6> db_dpose_j = pts_i(0)*dE_dpose_j.row(3) + pts_i(1)*dE_dpose_j.row(4) + dE_dpose_j.row(5); 
     Matrix<double, 1, 6> dc_dpose_j = pts_j(0)*dE_dpose_j.row(0) + pts_j(1)*dE_dpose_j.row(3) + dE_dpose_j.row(6); 
     Matrix<double, 1, 6> dd_dpose_j = pts_j(0)*dE_dpose_j.row(1) + pts_j(1)*dE_dpose_j.row(4) + dE_dpose_j.row(7); 
-    Matrix<double, 1, 6> dLe_dpose_j = -(a*da_dpose_j + b*db_dpose_j + c*dc_dpose_j + d*dd_dpose_j)/(Le*Le*Le);
+    Matrix<double, 1, 6> dLe_dpose_j = -2*(a*da_dpose_j + b*db_dpose_j + c*dc_dpose_j + d*dd_dpose_j)/(Le*Le);
     dse_dpose_j = dse_dpose_j + Ue*dLe_dpose_j; 
     // cout << "dse_dpose_i: "<<endl<<dse_dpose_i<<endl; 
     // cout << "dse_dpose_j: "<<endl<<dse_dpose_j<<endl; 
+
+    // dsse_dpose_i 
+    double se = Ue/Le; 
+    Matrix<double, 4, 6> dsse_dpose_i, dsse_dpose_j; 
+    dsse_dpose_i.row(0) = se*dc_dpose_i + c*dse_dpose_i; dsse_dpose_i.row(1) = se*dd_dpose_i+d*dse_dpose_i;
+    dsse_dpose_i.row(2) = se*da_dpose_i + a*dse_dpose_i; dsse_dpose_i.row(3) = se*db_dpose_i+b*dse_dpose_i; 
+
+    dsse_dpose_j.row(0) = se*dc_dpose_j + c*dse_dpose_j; dsse_dpose_j.row(1) = se*dd_dpose_j+d*dse_dpose_j;
+    dsse_dpose_j.row(2) = se*da_dpose_j + a*dse_dpose_j; dsse_dpose_j.row(3) = se*db_dpose_j+b*dse_dpose_j; 
+ 
+    // cout << "dsse_dpose_i: "<<endl<<dsse_dpose_i<<endl; 
+    // cout << "dsse_dpose_j: "<<endl<<dsse_dpose_j<<endl; 
+
+
+    if(jacobians!=NULL){
+    	Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]); 
+    	Eigen::Map<Eigen::Matrix<double, 4, 7, Eigen::RowMajor>> jacobian_pose_j(jacobians[1]);
+
+    	jacobian_pose_i.block<4,6>(0,0) = - sqrt_info * dsse_dpose_i; 
+    	jacobian_pose_j.block<4,6>(0,0) = - sqrt_info * dsse_dpose_j; 
+	}
 }
